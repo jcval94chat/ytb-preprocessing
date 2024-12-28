@@ -44,6 +44,11 @@ from utils.text_processing import (
 from utils.model_utils import (
     get_model_interpret
 )
+
+from utils.interpret_clusters import (
+    get_model_interpret, get_model_idioma, prepare_lang, generate_features_extended, train_model_lg,
+    get_dict_descripciones
+)
 # Nota: Si tienes otras funciones en interpret_clusters, etc., impórtalas según necesites
 
 # ----------------------------------------------------------------------------
