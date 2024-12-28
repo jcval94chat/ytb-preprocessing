@@ -1,0 +1,38 @@
+name: Weekly Build
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"  # Lunes a las 07:00 UTC
+  workflow_dispatch:  # Para dispararlo manualmente si se desea
+
+jobs:
+  build_and_run:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Decode credentials (opcional, si usas base64)
+        if: ${{ secrets.SECRET_CREDS_FILE }}
+        run: |
+          echo "${{ secrets.SECRET_CREDS_FILE }}" | base64 --decode > credentials.json
+        shell: bash
+
+      - name: Run script
+        env:
+          SECRET_FOLDER_ID: ${{ secrets.SECRET_FOLDER_ID }}
+          # Si usas la ruta "credentials.json" de la sección anterior
+          SECRET_CREDS_FILE: credentials.json
+        run: |
+          python main.py
