@@ -41,15 +41,13 @@ from utils.text_processing import (
     get_best_words_df,
     get_top_bottom_videos
 )
-from utils.model_utils import (
-    get_model_interpret
-)
+from InsideForest import trees, models, regions, labels
 
+# Estas funciones asumen que tu proyecto las tiene definidas en `utils/interpret_clusters.py` (o donde corresponda):
 from utils.interpret_clusters import (
-    get_model_interpret, get_model_idioma, prepare_lang, generate_features_extended, train_model_lg,
+    get_model_interpret,
     get_dict_descripciones
 )
-# Nota: Si tienes otras funciones en interpret_clusters, etc., impórtalas según necesites
 
 # ----------------------------------------------------------------------------
 # FUNCIÓN PRINCIPAL
@@ -57,17 +55,20 @@ from utils.interpret_clusters import (
 
 def main():
     """
-    Ejemplo de script principal que:
+    Script principal que:
       1) Obtiene datos de Google Sheets (carpeta en Drive),
       2) Elimina duplicados,
       3) Procesa DataFrame (detección de idioma, métricas diarias, etc.),
-      4) Extrae "mejores palabras" y "top/bottom videos",
-      5) Sube resultados (opcional) a Google Sheets.
+      4) Separa en VIDEOS/SHORTS,
+      5) Extrae "mejores palabras", top & bottom videos,
+      6) Realiza interpretación de modelo con InsideForest,
+      7) Limpia cluster_descripcion y sube resultados a Google Sheets.
     """
 
-    # 1. Leer secrets de variables de entorno (definidas en GitHub Actions)
+    # 1. Leer secrets de variables de entorno (definidas en GitHub Actions, por ejemplo)
     folder_id = os.environ.get("SECRET_FOLDER_ID", None)
     creds_file = os.environ.get("SECRET_CREDS_FILE", None)
+    spreadsheet_id_postprocess = os.environ.get("SPREADSHEET_ID_POSTPROCESS", None)
 
     if not folder_id or not creds_file:
         logger.error("No se pudieron obtener 'folder_id' o 'creds_file' desde los secrets.")
@@ -78,9 +79,9 @@ def main():
     combined_df = get_sheets_data_from_folder(
         folder_id=folder_id,
         creds_file=creds_file,
-        days=30,
-        max_files=60,
-        sleep_seconds=2
+        days=30,        # Ajusta según tus necesidades
+        max_files=60,   # Límite de archivos a leer
+        sleep_seconds=2 # Pausa entre lecturas para no saturar la API
     )
     if combined_df is None:
         logger.warning("No se obtuvo ningún DataFrame (None). Abortando proceso.")
@@ -93,62 +94,103 @@ def main():
     combined_df.drop_duplicates(subset=['video_id','execution_date'], inplace=True)
     logger.info(f"Dimensiones tras drop_duplicates: {combined_df.shape}")
 
-    # 4. Procesamiento adicional (ej. detección de idioma, cálculo de métricas)
-    logger.info("Detectando idioma y calculando métricas diarias...")
-    combined_df = detect_language(combined_df)
-    combined_df = calculate_avg_daily_metrics(combined_df)
+    # 4.1. Cargar modelos de lenguaje spaCy (asígnales a variables globales si deseas)
+    #      Si los usas en otras partes, podrías hacerlo aquí o en un módulo aparte
+    logger.info("Cargando modelos spaCy (es_core_news_sm, en_core_web_sm)...")
+    nlp_es = spacy.load('es_core_news_sm')
+    nlp_en = spacy.load('en_core_web_sm')
 
-    # 5. Dividir en VIDEOS y SHORTS (ejemplo)
-    df_videos = combined_df[combined_df['duration_seconds'].astype(int) > 62].copy()
-    df_shorts = combined_df[combined_df['duration_seconds'].astype(int) <= 62].copy()
+    # 4.2. Eliminar duplicados por ['title','upload_date','channel_name']
+    combined_df.drop_duplicates(subset=['title','upload_date','channel_name'], inplace=True)
+    combined_df.reset_index(drop=True, inplace=True)
+    logger.info(f"Después de eliminar duplicados (title/upload_date/channel): {combined_df.shape}")
 
-    logger.info(f"Se obtuvieron {df_videos.shape[0]} 'VIDEOS' y {df_shorts.shape[0]} 'SHORTS'.")
+    # 4.3. Separar en df_SHORTS y df_VIDEOS
+    df_ALL = combined_df.copy()
+    df_SHORTS = df_ALL[df_ALL['duration_seconds'].astype(int) <= 62].copy()
+    df_VIDEOS = df_ALL[df_ALL['duration_seconds'].astype(int) > 62].copy()
+    logger.info(f"Se obtuvieron {df_VIDEOS.shape[0]} 'VIDEOS' y {df_SHORTS.shape[0]} 'SHORTS'.")
 
-    # 6. Ejemplo de extracción de mejores palabras
-    df_indice_all, df_S_dict = get_best_words_df(df_videos, stopw=False)
-    logger.info(f"get_best_words_df() generó {df_indice_all.shape[0]} filas en df_indice_all")
+    # 4.4. Detectar idioma, calcular métricas, etc. para VIDEOS
+    df_VIDEOS = detect_language(df_VIDEOS)
+    df_VIDEOS = calculate_avg_daily_metrics(df_VIDEOS)
 
-    # 7. Top & bottom videos
-    df_S_df_videos = pd.concat([v for k, v in df_S_dict.items()], axis=0)
-    top_5_v, bottom_5_v = get_top_bottom_videos(
-        df_S_df_videos, channel_column="channel_name",
-        metric_column="LongTerm_Success", top_n=5
+    # 5. get_best_words_df para VIDEOS
+    df_indice_all, df_S_dict = get_best_words_df(df_VIDEOS, stopw=False)
+    df_indice_all = df_indice_all[df_indice_all['language'] != 'Other']
+    logger.info(f"df_indice_all (VIDEOS) => {df_indice_all.shape}")
+
+    df_S_df_ = pd.concat([v for k, v in df_S_dict.items()], axis=0)
+
+    # 5.1. Top & bottom videos por canal (VIDEOS)
+    top_5, bottom_5 = get_top_bottom_videos(
+        df_S_df_, channel_column="channel_name", metric_column="LongTerm_Success", top_n=6
     )
-    extreme_titles_videos = pd.concat([top_5_v, bottom_5_v], axis=0).drop_duplicates(subset=['channel_name','title'])
-    logger.info("Extraídos top y bottom videos para 'VIDEOS'")
+    Extreme_Titles = pd.concat([top_5, bottom_5], axis=0).drop_duplicates(subset=['channel_name','title'])
+    logger.info(f"Se extrajeron Extreme_Titles (VIDEOS) => {Extreme_Titles.shape}")
 
-    # Repetir para shorts si deseas
-    df_indice_all_shorts, df_S_dict_shorts = get_best_words_df(df_shorts, stopw=False)
-    df_S_df_shorts = pd.concat([v for k, v in df_S_dict_shorts.items()], axis=0)
+    # 6. Lo mismo para SHORTS
+    df_SHORTS = detect_language(df_SHORTS)
+    df_SHORTS = calculate_avg_daily_metrics(df_SHORTS)
+
+    df_indice_all_SHORTS, df_S_dict_SHORTS = get_best_words_df(df_SHORTS, stopw=False)
+    df_indice_all_SHORTS = df_indice_all_SHORTS[df_indice_all_SHORTS['language'] != 'Other']
+
     top_5_s, bottom_5_s = get_top_bottom_videos(
-        df_S_df_shorts, channel_column="channel_name",
-        metric_column="LongTerm_Success", top_n=5
+        df_S_df_, channel_column="channel_name", metric_column="LongTerm_Success", top_n=10
     )
-    extreme_titles_shorts = pd.concat([top_5_s, bottom_5_s], axis=0).drop_duplicates(subset=['channel_name','title'])
+    Extreme_Titles = pd.concat([top_5_s, bottom_5_s], axis=0).drop_duplicates(subset=['channel_name','title'])
+    logger.info(f"Se extrajeron Extreme_Titles (SHORTS) => {Extreme_Titles.shape}")
 
-    # 8. Ejemplo de "interpretación de modelo" (si usas InsideForest)
-    #    Nota: get_model_interpret() es solo un ejemplo de la lógica que
-    #    habías descrito. Ajusta a tu caso real.
-    df_titulos_full_info, mejores_clusters, df_datos_clusterizados, palabras_top, feature_columns, adfuhie_dafs = \
-        get_model_interpret(df_S_dict)
+    df_S_df_SHORTS = pd.concat([v for k, v in df_S_dict_SHORTS.items()], axis=0)
+    top_5_SHORTS, bottom_5_SHORTS = get_top_bottom_videos(
+        df_S_df_SHORTS, channel_column="channel_name", metric_column="LongTerm_Success", top_n=10
+    )
+    Extreme_Titles_SHORTS = pd.concat([top_5_SHORTS, bottom_5_SHORTS], axis=0).drop_duplicates(subset=['channel_name','title'])
 
-    logger.info("Interpretación de clusters completada.")
+    # 7. (Opcional) InsideForest: arboles, modelos, regiones, labels
+    logger.info("Instanciando InsideForest (arbolesSP, arbolesPY, modelos, regiones, labels)...")
+    arbolesSP = trees('pyspark')
+    arbolesPY = trees('py')
+    model_inforest = models()  # si se usa
+    regiones_inforest = regions()
+    descript = labels()
 
-    # 9. (Opcional) Subir resultados a Google Sheets
-    logger.info("Subiendo resultados a Google Sheets (opcional)...")
-    spreadsheet_id_postprocess = os.environ.get("SPREADSHEET_ID_POSTPROCESS", None)  # otro secret, por ejemplo
+    # 8. Interpretación y clusterización (ejemplo)
+    (df_titulos_full_info, mejores_clusters, df_datos_clusterizados,
+     palabras_top, feature_columns, adfuhie_dafs) = get_model_interpret(df_S_dict)
+
+    (df_titulos_full_info_SH, mejores_clusters_SH, df_datos_clusterizados_SH,
+     palabras_top_SH, feature_columns_SH, adfuhie_dafs_SH) = get_model_interpret(df_S_dict_SHORTS)
+
+    # 8.1. Limpieza de descripciones de clusters
+    logger.info("Generando diccionarios de descripciones limpias para clusters...")
+    cluster_cleaned_dict = get_dict_descripciones(adfuhie_dafs, palabras_top, feature_columns, df_datos_clusterizados)
+    cluster_cleaned_dict_SH = get_dict_descripciones(adfuhie_dafs_SH, palabras_top_SH, feature_columns_SH, df_datos_clusterizados_SH)
+
+    df_datos_clusterizados['cluster_descripcion'] = df_datos_clusterizados['cluster_descripcion'].replace(cluster_cleaned_dict)
+    df_titulos_full_info['cluster_descripcion'] = df_titulos_full_info['cluster_descripcion'].replace(cluster_cleaned_dict)
+    df_datos_clusterizados_SH['cluster_descripcion'] = df_datos_clusterizados_SH['cluster_descripcion'].replace(cluster_cleaned_dict_SH)
+    df_titulos_full_info_SH['cluster_descripcion'] = df_titulos_full_info_SH['cluster_descripcion'].replace(cluster_cleaned_dict_SH)
+    mejores_clusters['cluster_descripcion'] = mejores_clusters['cluster_descripcion'].replace(cluster_cleaned_dict)
+    mejores_clusters_SH['cluster_descripcion'] = mejores_clusters_SH['cluster_descripcion'].replace(cluster_cleaned_dict_SH)
+
+    # 9. Subir DataFrames a Google Sheets (opcional)
     if spreadsheet_id_postprocess:
-        upload_dataframe_to_google_sheet(extreme_titles_videos, creds_file, spreadsheet_id_postprocess, 'titulos_videos')
-        upload_dataframe_to_google_sheet(df_indice_all, creds_file, spreadsheet_id_postprocess, 'palabras_videos')
-        upload_dataframe_to_google_sheet(df_titulos_full_info, creds_file, spreadsheet_id_postprocess, 'titulos_cluster_videos')
-        upload_dataframe_to_google_sheet(mejores_clusters, creds_file, spreadsheet_id_postprocess, 'clusters_videos')
-        
-        # Y lo mismo para shorts
-        upload_dataframe_to_google_sheet(extreme_titles_shorts, creds_file, spreadsheet_id_postprocess, 'titulos_shorts')
-        upload_dataframe_to_google_sheet(df_indice_all_shorts, creds_file, spreadsheet_id_postprocess, 'palabras_shorts')
-        # etc...
+        logger.info("Subiendo DataFrames a Google Sheets...")
 
-    logger.info("Proceso finalizado con éxito.")
+        # Ejemplos de subidas
+        exito = upload_dataframe_to_google_sheet(Extreme_Titles, creds_file, spreadsheet_id_postprocess, 'titulos')
+        exito = upload_dataframe_to_google_sheet(df_indice_all, creds_file, spreadsheet_id_postprocess, 'palabras')
+        exito = upload_dataframe_to_google_sheet(df_titulos_full_info, creds_file, spreadsheet_id_postprocess, 'titulos_cluster')
+        exito = upload_dataframe_to_google_sheet(mejores_clusters, creds_file, spreadsheet_id_postprocess, 'clusters')
+
+        exito = upload_dataframe_to_google_sheet(Extreme_Titles_SHORTS, creds_file, spreadsheet_id_postprocess, 'titulos_shorts')
+        exito = upload_dataframe_to_google_sheet(df_indice_all_SHORTS, creds_file, spreadsheet_id_postprocess, 'palabras_shorts')
+        exito = upload_dataframe_to_google_sheet(df_titulos_full_info_SH, creds_file, spreadsheet_id_postprocess, 'titulos_cluster_shorts')
+        exito = upload_dataframe_to_google_sheet(mejores_clusters_SH, creds_file, spreadsheet_id_postprocess, 'clusters_shorts')
+
+    logger.info("¡Proceso finalizado con éxito!")
 
 # ----------------------------------------------------------------------------
 # EJECUCIÓN
