@@ -87,3 +87,49 @@ def get_sheets_data_from_folder(folder_id, creds_file, days=30, max_files=60, sl
 
 # La función upload_dataframe_to_google_sheet iría aquí también
 # (omitida en este snippet para brevedad).
+
+def sanitize_dataframe(df):
+    """
+    Reemplaza valores no JSON-compliant en el DataFrame:
+    - Reemplaza inf, -inf y NaN con None.
+    - Convierte datetime a cadenas.
+    """
+    df_replaced = df.replace([np.inf, -np.inf, np.nan], None)
+    for col in df_replaced.select_dtypes(include=['datetime', 'datetime64[ns]']).columns:
+        df_replaced[col] = df_replaced[col].astype(str)
+
+    # Verificar si quedan valores problemáticos:
+    # (Opcional, se podría omitir si no te hace falta la comprobación extra)
+    return df_replaced
+
+def upload_dataframe_to_google_sheet(df, creds_file, spreadsheet_id, sheet_name='Sheet1'):
+    """
+    Sube un DataFrame de pandas a una hoja de cálculo de Google Sheets.
+    """
+    try:
+        df_sanitized = sanitize_dataframe(df)
+        credentials = authenticate_google_services(creds_file)
+        client = gspread.authorize(credentials)
+
+        spreadsheet = client.open_by_key(spreadsheet_id)
+
+        # Selecciona worksheet
+        try:
+            sheet = spreadsheet.worksheet(sheet_name)
+        except gspread.exceptions.WorksheetNotFound:
+            sheet = spreadsheet.add_worksheet(title=sheet_name, rows="1000", cols="20")
+
+        sheet.clear()
+
+        data = [df_sanitized.columns.values.tolist()] + df_sanitized.values.tolist()
+        sheet.update(data)
+
+        logging.info(f"Datos subidos correctamente a '{sheet_name}' en la hoja '{spreadsheet_id}'.")
+        return True
+
+    except Exception as e:
+        logging.error(f"Error al subir DataFrame a Google Sheets: {str(e)}")
+        logging.error(traceback.format_exc())
+        return False
+
+
