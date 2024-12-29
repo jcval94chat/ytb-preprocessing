@@ -73,7 +73,21 @@ def main():
     if not folder_id or not creds_file:
         logger.error("No se pudieron obtener 'folder_id' o 'creds_file' desde los secrets.")
         return  # Terminamos, pues no hay cómo continuar
+    
+    # En lugar de hardcodear "es_core_news_sm", tomamos la env var
+    es_model = os.environ.get("SPACY_ES_MODEL", "es_core_news_sm")
+    en_model = os.environ.get("SPACY_EN_MODEL", "en_core_web_sm")
+    
+    
+    # 4.1. Cargar modelos de lenguaje spaCy (asígnales a variables globales si deseas)
+    #      Si los usas en otras partes, podrías hacerlo aquí o en un módulo aparte
+    logger.info("Cargando modelos spaCy (es_core_news_sm, en_core_web_sm)...")
+    # Ahora spaCy cargará esos modelos. 
+    # Ya están instalados (descargados) en el paso anterior del workflow.
+    nlp_es = spacy.load(es_model)
+    nlp_en = spacy.load(en_model)
 
+    
     # 2. Obtener DataFrame desde Google Sheets en una carpeta de Drive
     logger.info(f"Obteniendo datos de la carpeta con ID='{folder_id}'...")
     combined_df = get_sheets_data_from_folder(
@@ -93,12 +107,6 @@ def main():
     logger.info("Eliminando duplicados por ['video_id','execution_date']...")
     combined_df.drop_duplicates(subset=['video_id','execution_date'], inplace=True)
     logger.info(f"Dimensiones tras drop_duplicates: {combined_df.shape}")
-
-    # 4.1. Cargar modelos de lenguaje spaCy (asígnales a variables globales si deseas)
-    #      Si los usas en otras partes, podrías hacerlo aquí o en un módulo aparte
-    logger.info("Cargando modelos spaCy (es_core_news_sm, en_core_web_sm)...")
-    nlp_es = spacy.load('es_core_news_sm')
-    nlp_en = spacy.load('en_core_web_sm')
 
     # 4.2. Eliminar duplicados por ['title','upload_date','channel_name']
     combined_df.drop_duplicates(subset=['title','upload_date','channel_name'], inplace=True)
