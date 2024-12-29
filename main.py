@@ -8,6 +8,7 @@ import pandas as pd
 import spacy
 import nltk
 import math
+import json
 import numpy as np
 
 # ----------------------------------------------------------------------------
@@ -209,6 +210,11 @@ def main():
 
     logger.info("¡Modelos guardados (o actualizados) en la carpeta 'models/'!")
 
+    # Opción binaria (pickle)
+    joblib.dump(feature_columns, "otros_objetos/feature_columns.pkl")
+    joblib.dump(feature_columns_SH, "otros_objetos/feature_columns_SH.pkl")
+    joblib.dump(palabras_top, "otros_objetos/palabras_top.pkl")
+    joblib.dump(palabras_top_SH, "otros_objetos/palabras_top_SH.pkl")
 
 # ----------------------------------------------------------------------------
 # EJECUCIÓN
