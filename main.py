@@ -149,12 +149,7 @@ def main():
     Extreme_Titles_SHORTS = pd.concat([top_5_SHORTS, bottom_5_SHORTS], axis=0).drop_duplicates(subset=['channel_name','title'])
 
     # 7. (Opcional) InsideForest: arboles, modelos, regiones, labels
-    logger.info("Instanciando InsideForest (arbolesSP, arbolesPY, modelos, regiones, labels)...")
-    arbolesSP = trees('pyspark')
-    arbolesPY = trees('py')
-    model_inforest = models()  # si se usa
-    regiones_inforest = regions()
-    descript = labels()
+    logger.info("Interpretabilidad de los modelos")
 
     # 8. Interpretación y clusterización (ejemplo)
     (df_titulos_full_info, mejores_clusters, df_datos_clusterizados,
