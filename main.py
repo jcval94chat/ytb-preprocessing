@@ -7,6 +7,7 @@ import pandas as pd
 import spacy
 import nltk
 import math
+import numpy as np
 
 # ----------------------------------------------------------------------------
 # CONFIGURACIÓN DE LOGGING
