@@ -3,7 +3,9 @@
 import logging
 import time
 import pandas as pd
+import numpy as np
 import gspread
+import traceback
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
