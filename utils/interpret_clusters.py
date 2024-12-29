@@ -1,14 +1,22 @@
 # utils/interpret_clusters.py
 
 import re
+from InsideForest import trees, regions
+import pandas as pd
+import re
+from nltk.corpus import stopwords
+from collections import Counter
+import langid
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+
 
 def get_model_interpret(df_S_dict):
     """
     Ejecuta el pipeline con InsideForest, regiones, etc.
     Crea clusterización y saca mejores/peores títulos.
     """
-    from InsideForest import trees, models, regions, labels
-    import pandas as pd
 
     # Preparamos dos "idiomas"
     # Asumiendo que df_S_dict es un diccionario con 'English' y 'Spanish'
@@ -110,13 +118,6 @@ def prepare_lang(df_S):
     df["target"] = (df["LongTerm_Success"] > df["LongTerm_Success"].median()).astype(int)
     return df
 
-import re
-from nltk.corpus import stopwords
-from collections import Counter
-import langid
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report
 
 def generate_features_extended(df, title_column, most_common_words=None):
     """
@@ -270,7 +271,6 @@ def get_best_worst_titles(df_en, df_datos_clusterizados, var_obj):
     """
     Retorna dataframes con títulos 'mejores' y 'peores' según la variable objetivo.
     """
-    import pandas as pd
 
     df_en_resumen = df_en[['title','channel_name',var_obj]].reset_index(drop=True)
     df_en_resumen['cluster_descripcion'] = df_datos_clusterizados['cluster_descripcion'].astype(str)
