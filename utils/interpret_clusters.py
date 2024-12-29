@@ -28,7 +28,9 @@ def get_model_interpret(df_S_dict):
 
     # 1) get_model_idioma
     idioma_es_en, feature_columns, palabras_top = get_model_idioma(dfs_ls_)
-
+    # lista de modelos
+    lista_de_modelos = [model for (model, _) in idioma_es_en]
+    
     # Tomamos cada una
     model_en, df_en = idioma_es_en[1]
     model_es, df_es = idioma_es_en[0]
@@ -68,7 +70,7 @@ def get_model_interpret(df_S_dict):
     mejores_clusters = pd.concat([mejores_titulos_en_agg, mejores_titulos_es_agg])
 
     return (df_titulos_full_info, mejores_clusters, df_datos_clusterizados,
-            palabras_top, feature_columns, adfuhie_dafs)
+            palabras_top, feature_columns, adfuhie_dafs, lista_de_modelos)
 
 def get_model_idioma(dfs_ls_):
     """
