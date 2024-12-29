@@ -2,10 +2,11 @@
 
 import logging
 import os
-
+import traceback
 import pandas as pd
 import spacy
 import nltk
+import math
 
 # ----------------------------------------------------------------------------
 # CONFIGURACIÓN DE LOGGING
