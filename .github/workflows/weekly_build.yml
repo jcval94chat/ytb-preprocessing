@@ -42,13 +42,18 @@ jobs:
           echo "SPACY_ES_MODEL=es_core_news_sm" >> $GITHUB_ENV
           echo "SPACY_EN_MODEL=en_core_web_sm" >> $GITHUB_ENV
 
+      - name: Decode credentials
+        run: |
+          echo "${{ secrets.SECRET_CREDS_FILE }}" | base64 --decode > credentials.json
+        shell: bash
+          
       # ------------------------------------------------------------
       # EJECUTAR MAIN.PY
       # ------------------------------------------------------------
       - name: Run main.py
         env:
           SECRET_FOLDER_ID: ${{ secrets.SECRET_FOLDER_ID }}
-          SECRET_CREDS_FILE: ${{ secrets.SECRET_CREDS_FILE }}
+          SECRET_CREDS_FILE: credentials.json
           SPREADSHEET_ID_POSTPROCESS: ${{ secrets.SPREADSHEET_ID_POSTPROCESS }}
         run: |
           python main.py
