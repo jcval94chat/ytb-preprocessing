@@ -163,10 +163,10 @@ def main():
 
     # 8. Interpretación y clusterización (ejemplo)
     (df_titulos_full_info, mejores_clusters, df_datos_clusterizados,
-     palabras_top, feature_columns, adfuhie_dafs) = get_model_interpret(df_S_dict)
+     palabras_top, feature_columns, adfuhie_dafs, lista_modelos) = get_model_interpret(df_S_dict)
 
     (df_titulos_full_info_SH, mejores_clusters_SH, df_datos_clusterizados_SH,
-     palabras_top_SH, feature_columns_SH, adfuhie_dafs_SH) = get_model_interpret(df_S_dict_SHORTS)
+     palabras_top_SH, feature_columns_SH, adfuhie_dafs_SH, lista_modelos_SH) = get_model_interpret(df_S_dict_SHORTS)
 
     # 8.1. Limpieza de descripciones de clusters
     logger.info("Generando diccionarios de descripciones limpias para clusters...")
