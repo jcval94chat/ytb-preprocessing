@@ -5,6 +5,9 @@ on:
     - cron: "0 7 * * 1"    # Lunes a las 07:00 UTC
   workflow_dispatch:       # Permite ejecución manual
 
+permissions:
+  contents: write
+
 jobs:
   build_and_run:
     runs-on: ubuntu-latest
@@ -57,3 +60,21 @@ jobs:
           SPREADSHEET_ID_POSTPROCESS: ${{ secrets.SPREADSHEET_ID_POSTPROCESS }}
         run: |
           python main.py
+
+
+
+      # -------------------------------------------------------
+      # COMMIT AUTOMÁTICO DE LOS MODELOS ACTUALIZADOS
+      # -------------------------------------------------------
+      - name: Commit updated models
+        if: success()    # Sólo si todo lo anterior fue exitoso
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          
+          # Agregar los posibles cambios (nuevos .pkl en /models)
+          git add models/
+
+          # Si NO hay cambios, git diff-index saldrá 0 => no comitea
+          git diff --quiet HEAD || git commit -m "chore: update random forest models on $(date)"
+          git push
