@@ -1,5 +1,6 @@
 # main.py
 
+import joblib
 import logging
 import os
 import traceback
@@ -196,6 +197,18 @@ def main():
         exito = upload_dataframe_to_google_sheet(mejores_clusters_SH, creds_file, spreadsheet_id_postprocess, 'clusters_shorts')
 
     logger.info("¡Proceso finalizado con éxito!")
+
+    if not os.path.exists("models"):
+        os.makedirs("models")
+    
+    joblib.dump(lista_modelos[0], "models/model_videos_es.pkl")
+    joblib.dump(lista_modelos[1], "models/model_videos_en.pkl")
+
+    joblib.dump(lista_modelos_SH[0], "models/model_shorts_es.pkl")
+    joblib.dump(lista_modelos_SH[1], "models/model_shorts_en.pkl")
+
+    logger.info("¡Modelos guardados (o actualizados) en la carpeta 'models/'!")
+
 
 # ----------------------------------------------------------------------------
 # EJECUCIÓN
