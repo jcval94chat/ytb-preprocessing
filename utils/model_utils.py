@@ -121,7 +121,7 @@ def generate_top_texts(model, vectorizer_title, predict_function, feature_names,
         pred_likes = predict_function(model, vectorizer_title, text_, language, stopw, nlp_es, nlp_en)
         predictions.append((text_, pred_likes))
 
-    predictions.sort(key=lambda x: x[1], reverse=True)
+    predictions.sort(key=lambda x: x[1][0], reverse=True)
     if top_n is None:
         top_texts = [text_ for (text_, _) in predictions]
         top_preds = [pred for (_, pred) in predictions]
