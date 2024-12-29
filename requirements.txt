@@ -11,3 +11,4 @@ InsideForest==0.1.3
 pandas
 numpy
 scikit-learn
+seaborn
