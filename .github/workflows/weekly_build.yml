@@ -2,16 +2,17 @@ name: Weekly Build
 
 on:
   schedule:
-    - cron: "0 7 * * 1"   # Lunes a las 07:00 UTC
-  workflow_dispatch:
+    - cron: "0 7 * * 1"    # Lunes a las 07:00 UTC
+  workflow_dispatch:       # Permite ejecución manual
 
 jobs:
   build_and_run:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -22,15 +23,32 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Decode credentials.json
+      # ------------------------------------------------------------
+      # DESCARGAR MODELOS SPACY
+      # ------------------------------------------------------------
+      - name: Install spaCy language models
         run: |
-          # ${{ secrets.SECRET_CREDS_FILE }} es la base64
-          echo "${{ secrets.SECRET_CREDS_FILE }}" | base64 --decode > credentials.json
+          python -m spacy download es_core_news_sm
+          python -m spacy download en_core_web_sm
+        shell: bash
 
+      # ------------------------------------------------------------
+      # EXPORTAR NOMBRES DE MODELOS A VARIABLES DE ENTORNO
+      # ------------------------------------------------------------
+      # En GitHub Actions, si deseas que las variables persistan en pasos posteriores,
+      # puedes usar "echo 'VAR=value' >> $GITHUB_ENV"
+      - name: Set environment variables for spaCy
+        run: |
+          echo "SPACY_ES_MODEL=es_core_news_sm" >> $GITHUB_ENV
+          echo "SPACY_EN_MODEL=en_core_web_sm" >> $GITHUB_ENV
+
+      # ------------------------------------------------------------
+      # EJECUTAR MAIN.PY
+      # ------------------------------------------------------------
       - name: Run main.py
         env:
           SECRET_FOLDER_ID: ${{ secrets.SECRET_FOLDER_ID }}
-          SECRET_CREDS_FILE: credentials.json
+          SECRET_CREDS_FILE: ${{ secrets.SECRET_CREDS_FILE }}
           SPREADSHEET_ID_POSTPROCESS: ${{ secrets.SPREADSHEET_ID_POSTPROCESS }}
         run: |
           python main.py
