@@ -6,13 +6,31 @@ import json
 from nltk.corpus import stopwords
 from collections import Counter
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-
-
 # Importar tu lógica de features si la tienes en utils/
 from utils.interpret_clusters import generate_features_extended
 
 import nltk
 nltk.download('stopwords')
+
+
+import logging
+import joblib
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+import os
+
+# Configuración del logging
+logging.basicConfig(
+    level=logging.INFO,  # Nivel de severidad
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Formato del mensaje
+    handlers=[
+        logging.FileHandler("model_verification.log"),  # Archivo donde se guardarán los logs
+        logging.StreamHandler()  # También se mostrarán en la consola
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
+
 
 # -----------------------------------
 # CARGA DE MODELOS (.pkl)
