@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pickle
 import pandas as pd
@@ -6,14 +5,12 @@ import json
 from nltk.corpus import stopwords
 from collections import Counter
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-# Importar tu lógica de features
 from utils.interpret_clusters import generate_features_extended
 import nltk
 nltk.download('stopwords')
 
 import logging
 import joblib
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import os
 
 # Configuración del logging
@@ -21,11 +18,10 @@ logging.basicConfig(
     level=logging.INFO,  # Nivel de severidad
     format='%(asctime)s - %(levelname)s - %(message)s',  # Formato del mensaje
     handlers=[
-        logging.FileHandler("model_verification.log"),  # Archivo donde se guardarán los logs
-        logging.StreamHandler()  # También se mostrarán en la consola
+        logging.FileHandler("model_verification.log"),  # Archivo para logs
+        logging.StreamHandler()                        # También a consola
     ]
 )
-
 logger = logging.getLogger(__name__)
 
 # -----------------------------------
@@ -36,21 +32,6 @@ model_shorts_es = joblib.load("models/model_shorts_es.joblib")
 model_videos_en = joblib.load("models/model_videos_en.joblib")
 model_videos_es = joblib.load("models/model_videos_es.joblib")
 
-def verificar_tipo_modelo(model, nombre_modelo):
-    """Función de verificación (opcional)"""
-    if isinstance(model, RandomForestClassifier):
-        tipo = "RandomForestClassifier"
-    elif isinstance(model, RandomForestRegressor):
-        tipo = "RandomForestRegressor"
-    else:
-        tipo = type(model).__name__
-    print(f"El modelo '{nombre_modelo}' es de tipo: {tipo}")
-
-# (Opcional) Verificar tipo de cada modelo
-verificar_tipo_modelo(model_shorts_en, "model_shorts_en")
-verificar_tipo_modelo(model_shorts_es, "model_shorts_es")
-verificar_tipo_modelo(model_videos_en, "model_videos_en")
-verificar_tipo_modelo(model_videos_es, "model_videos_es")
 
 # -----------------------------------
 # CARGA DE OBJETOS ADICIONALES
@@ -67,15 +48,17 @@ with open("otros_objetos/palabras_top.json", "r") as f:
 with open("otros_objetos/palabras_top_SH.json", "r") as f:
     palabras_top_SH = json.load(f)
 
+
 def eval_frase(frase, modelo, tipo="Shorts", idioma="Spanish"):
     """
     Evalúa una frase con un modelo específico. 
     'tipo' puede ser "Shorts" o "Videos".
     'idioma' puede ser "Spanish" o "English".
     """
+    # Construir un DataFrame temporal
     df_probar = pd.DataFrame({'titulo': [frase], 'language': [idioma]})
 
-    # Según el tipo, usamos feature_columns diferentes
+    # Generar features
     if tipo == "Shorts":
         features_2, _ = generate_features_extended(
             df_probar,
@@ -91,9 +74,11 @@ def eval_frase(frase, modelo, tipo="Shorts", idioma="Spanish"):
         )
         columnas = feature_columns
 
+    # Hacemos la predicción (asumiendo que el modelo es un clasificador)
     proba = modelo.predict_proba(features_2[columnas])
     score = proba[0][1]  # prob. de la clase "positiva"
     return float(score)
+
 
 def main():
     st.title("App de Evaluación de Títulos")
@@ -101,127 +86,133 @@ def main():
     # Creamos las pestañas
     tab1, tab2 = st.tabs(["Evaluación Interactiva", "Evaluar por Archivo"])
 
-    # ------------------------------------------------------------
+    # ------------------------------
     # PESTAÑA 1: EVALUACIÓN INTERACTIVA
-    # ------------------------------------------------------------
+    # ------------------------------
     with tab1:
         st.header("Ventana 1: Evaluación Interactiva")
-        st.write("Elige uno o varios modelos y evalúa de forma individual.")
 
         # Entrada de texto
         frase = st.text_input("Ingresa el título", value="Los 5 Secretos del Liderazgo Efectivo")
 
-        # Mostramos 4 checkboxes en horizontal, uno para cada modelo
+        st.write("**Selecciona los modelos a evaluar:**")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            usar_shorts_es = st.checkbox("Shorts ES", value=False)
+            usar_shorts_es = st.checkbox("Shorts ES", value=True)
         with col2:
-            usar_shorts_en = st.checkbox("Shorts EN", value=False)
+            usar_shorts_en = st.checkbox("Shorts EN", value=True)
         with col3:
-            usar_videos_es = st.checkbox("Videos ES", value=False)
+            usar_videos_es = st.checkbox("Videos ES", value=True)
         with col4:
-            usar_videos_en = st.checkbox("Videos EN", value=False)
+            usar_videos_en = st.checkbox("Videos EN", value=True)
 
         if st.button("Evaluar Frase"):
-            # Para cada modelo activo, calculamos score y lo mostramos
+            # Variables para almacenar los scores (None si no se usa)
+            score_sh_es = None
+            score_sh_en = None
+            score_v_es = None
+            score_v_en = None
+
+            # Calcular cada modelo activo
             if usar_shorts_es:
                 score_sh_es = eval_frase(frase, model_shorts_es, tipo="Shorts", idioma="Spanish")
-                st.success(f"[Shorts ES] Score: {score_sh_es:.4f}")
-
             if usar_shorts_en:
                 score_sh_en = eval_frase(frase, model_shorts_en, tipo="Shorts", idioma="English")
-                st.success(f"[Shorts EN] Score: {score_sh_en:.4f}")
-
             if usar_videos_es:
                 score_v_es = eval_frase(frase, model_videos_es, tipo="Videos", idioma="Spanish")
-                st.success(f"[Videos ES] Score: {score_v_es:.4f}")
-
             if usar_videos_en:
                 score_v_en = eval_frase(frase, model_videos_en, tipo="Videos", idioma="English")
-                st.success(f"[Videos EN] Score: {score_v_en:.4f}")
 
-    # ------------------------------------------------------------
-    # PESTAÑA 2: EVALUAR ARCHIVO DE FRASES
-    # ------------------------------------------------------------
+            # Construimos un DF con una fila y columnas de cada modelo
+            data_result = {
+                "Shorts ES": [score_sh_es],
+                "Shorts EN": [score_sh_en],
+                "Videos ES": [score_v_es],
+                "Videos EN": [score_v_en]
+            }
+            df_result = pd.DataFrame(data_result)
+
+            st.write("### Resultados en tabla")
+            st.dataframe(df_result, use_container_width=True)
+
+    # ------------------------------
+    # PESTAÑA 2: EVALUACIÓN POR ARCHIVO
+    # ------------------------------
     with tab2:
         st.header("Ventana 2: Evaluar Archivo con Frases")
-        st.write("Sube un archivo CSV o TXT con una frase por renglón. "
-                 "Selecciona los modelos a utilizar y obtén un ranking de hasta 100 frases.")
+        st.write("Sube un archivo CSV o TXT con **una frase por renglón**. Se calculará la suma de scores de los modelos seleccionados y luego se mostrarán los resultados.")
 
-        # Checkboxes en horizontal para los cuatro modelos
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            usar_shorts_es_2 = st.checkbox("Shorts ES (2)", value=False)
-        with col2:
-            usar_shorts_en_2 = st.checkbox("Shorts EN (2)", value=False)
-        with col3:
-            usar_videos_es_2 = st.checkbox("Videos ES (2)", value=False)
-        with col4:
-            usar_videos_en_2 = st.checkbox("Videos EN (2)", value=False)
+        # Checkboxes (horizontal) para seleccionar modelos - por defecto activados
+        st.write("**Selecciona los modelos a evaluar:**")
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            usar_shorts_es_2 = st.checkbox("Shorts ES (2)", value=True)
+        with c2:
+            usar_shorts_en_2 = st.checkbox("Shorts EN (2)", value=True)
+        with c3:
+            usar_videos_es_2 = st.checkbox("Videos ES (2)", value=True)
+        with c4:
+            usar_videos_en_2 = st.checkbox("Videos EN (2)", value=True)
 
-        # Subida de archivo
+        # Subir archivo (CSV/TXT)
         archivo_subido = st.file_uploader("Sube tu archivo CSV o TXT", type=["csv", "txt"])
 
-        # Slider para definir cuántos resultados (Top N) mostrar
-        top_n = st.slider("Elige cuántos resultados mostrar", min_value=1, max_value=100, value=10)
+        # Slider para definir cuántos resultados mostrar (1 a 100)
+        top_n = st.slider("¿Cuántos resultados mostrar?", min_value=1, max_value=100, value=10)
 
         if archivo_subido is not None:
-            # Intentamos leer como CSV; si falla, leemos como TXT
+            # Intentamos leer como CSV
             try:
                 df_frases = pd.read_csv(archivo_subido, header=None, names=["frase"])
             except:
-                archivo_subido.seek(0)  # reiniciamos cursor para leer de nuevo
+                # Si falla, leemos como TXT
+                archivo_subido.seek(0)
                 lineas = archivo_subido.read().decode("utf-8").splitlines()
                 df_frases = pd.DataFrame({"frase": lineas})
 
-            st.write(f"Se han cargado {len(df_frases)} frases.")
+            st.write(f"**Se han cargado {len(df_frases)} frases.**")
 
-            if st.button("Evaluar Frases"):
+            if st.button("Evaluar Archivo"):
                 resultados = []
 
                 for _, row in df_frases.iterrows():
                     frase_texto = row["frase"]
-                    # Evaluamos con cada modelo (si está seleccionado). Si no, ponemos 0.
-                    s_sh_es = eval_frase(frase_texto, model_shorts_es, "Shorts", "Spanish") \
-                              if usar_shorts_es_2 else 0
-                    s_sh_en = eval_frase(frase_texto, model_shorts_en, "Shorts", "English") \
-                              if usar_shorts_en_2 else 0
-                    s_vid_es = eval_frase(frase_texto, model_videos_es, "Videos", "Spanish") \
-                               if usar_videos_es_2 else 0
-                    s_vid_en = eval_frase(frase_texto, model_videos_en, "Videos", "English") \
-                               if usar_videos_en_2 else 0
 
-                    total_score = s_sh_es + s_sh_en + s_vid_es + s_vid_en
+                    # Evaluamos con cada modelo seleccionado y sumamos
+                    score_sh_es = eval_frase(frase_texto, model_shorts_es, "Shorts", "Spanish") if usar_shorts_es_2 else 0
+                    score_sh_en = eval_frase(frase_texto, model_shorts_en, "Shorts", "English") if usar_shorts_en_2 else 0
+                    score_v_es  = eval_frase(frase_texto, model_videos_es, "Videos", "Spanish") if usar_videos_es_2 else 0
+                    score_v_en  = eval_frase(frase_texto, model_videos_en, "Videos", "English") if usar_videos_en_2 else 0
+
+                    score_total = score_sh_es + score_sh_en + score_v_es + score_v_en
 
                     resultados.append({
                         "frase": frase_texto,
-                        "Shorts ES": s_sh_es,
-                        "Shorts EN": s_sh_en,
-                        "Videos ES": s_vid_es,
-                        "Videos EN": s_vid_en,
-                        "Score Total": total_score
+                        "Shorts ES": score_sh_es if usar_shorts_es_2 else None,
+                        "Shorts EN": score_sh_en if usar_shorts_en_2 else None,
+                        "Videos ES": score_v_es if usar_videos_es_2 else None,
+                        "Videos EN": score_v_en if usar_videos_en_2 else None,
+                        "Score Total": score_total
                     })
 
-                # Ordenamos desc por Score Total
+                # Ordenamos por Score Total descendente
                 resultados_ordenados = sorted(resultados, key=lambda x: x["Score Total"], reverse=True)
-                # Tomamos los N que definimos en el slider
+
+                # Tomamos top_n
                 top_n_resultados = resultados_ordenados[:top_n]
 
-                st.write(f"## Top {top_n} frases")
-
-                # Convertimos a DataFrame para mostrarlo
+                # Convertimos a DataFrame
                 df_top = pd.DataFrame(top_n_resultados)
 
-                # Mostramos en un 'data_editor' para que el usuario pueda reordenar columnas
+                st.write(f"### Mejores {top_n} resultados")
+                # Mostramos el DataFrame (puede reordenar columnas con st.data_editor en versiones recientes)
                 st.data_editor(
                     df_top,
-                    disable_column_reordering=False,
                     use_container_width=True
                 )
 
-                # Si quieres mostrar detalles de cada fila, podrías usar un expander
-                # (aunque aquí cada columna ya está a la vista).
-                # with st.expander("Ver detalles..."):
+                # (Opcional) Expandir detalles si lo requieres
+                # with st.expander("Ver detalles"):
                 #     st.write(df_top)
 
 
