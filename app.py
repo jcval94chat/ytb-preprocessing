@@ -2,6 +2,7 @@
 import streamlit as st
 import pickle
 import pandas as pd
+import json
 
 # Importar tu lógica de features si la tienes en utils/
 # from utils.text_processing import generate_features_extended
