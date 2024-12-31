@@ -199,6 +199,14 @@ def main():
 
     logger.info("¡Proceso finalizado con éxito!")
 
+    # Verificar el tipo antes de guardar
+    logger.info("Verificando tipos de modelos antes de guardar:")
+    for idx, m in enumerate(lista_modelos):
+        logger.info(f"[VIDEOS] lista_modelos[{idx}] es de tipo: {type(m)}")
+
+    for idx, m in enumerate(lista_modelos_SH):
+        logger.info(f"[SHORTS] lista_modelos_SH[{idx}] es de tipo: {type(m)}")
+    
     if not os.path.exists("models"):
         os.makedirs("models")
     
@@ -209,12 +217,6 @@ def main():
     joblib.dump(lista_modelos_SH[1], "models/model_shorts_en.pkl")
 
     logger.info("¡Modelos guardados (o actualizados) en la carpeta 'models/'!")
-
-    # Opción binaria (pickle)
-    # joblib.dump(feature_columns, "otros_objetos/feature_columns.pkl")
-    # joblib.dump(feature_columns_SH, "otros_objetos/feature_columns_SH.pkl")
-    # joblib.dump(palabras_top, "otros_objetos/palabras_top.pkl")
-    # joblib.dump(palabras_top_SH, "otros_objetos/palabras_top_SH.pkl")
 
     # Asegúrate de que la carpeta existe
     if not os.path.exists("models"):
