@@ -8,10 +8,8 @@ from collections import Counter
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 # Importar tu lógica de features si la tienes en utils/
 from utils.interpret_clusters import generate_features_extended
-
 import nltk
 nltk.download('stopwords')
-
 
 import logging
 import joblib
@@ -35,10 +33,16 @@ logger = logging.getLogger(__name__)
 # -----------------------------------
 # CARGA DE MODELOS (.pkl)
 # -----------------------------------
-model_shorts_en = pickle.load(open("models/model_shorts_en.pkl", "rb"))
-model_shorts_es = pickle.load(open("models/model_shorts_es.pkl", "rb"))
-model_videos_en = pickle.load(open("models/model_videos_en.pkl", "rb"))
-model_videos_es = pickle.load(open("models/model_videos_es.pkl", "rb"))
+# model_shorts_en = pickle.load(open("models/model_shorts_en.pkl", "rb"))
+# model_shorts_es = pickle.load(open("models/model_shorts_es.pkl", "rb"))
+# model_videos_en = pickle.load(open("models/model_videos_en.pkl", "rb"))
+# model_videos_es = pickle.load(open("models/model_videos_es.pkl", "rb"))
+
+model_shorts_en = joblib.load("models/model_shorts_en.joblib")
+model_shorts_es = joblib.load("models/model_shorts_es.joblib")
+model_videos_en = joblib.load("models/model_videos_en.joblib")
+model_videos_es = joblib.load("models/model_videos_es.joblib")
+
 
 # Función para verificar el tipo de modelo
 def verificar_tipo_modelo(model, nombre_modelo):
