@@ -13,46 +13,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Paso 1: Checkout con Git LFS habilitado y full history
       - name: Check out code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0      # Clona todo el historial
+          lfs: true           # Habilita Git LFS
 
+      # Paso 2: Configurar Git
+      - name: Set up Git
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+
+      # Paso 3: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
+      # Paso 4: Instalar dependencias
       - name: Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ------------------------------------------------------------
-      # DESCARGAR MODELOS SPACY
-      # ------------------------------------------------------------
+      # Paso 5: Descargar modelos spaCy
       - name: Install spaCy language models
         run: |
           python -m spacy download es_core_news_sm
-          python -m spacy download en_core_web_sm
+          python -m spacy download en_core_news_sm
         shell: bash
 
-      # ------------------------------------------------------------
-      # EXPORTAR NOMBRES DE MODELOS A VARIABLES DE ENTORNO
-      # ------------------------------------------------------------
-      # En GitHub Actions, si deseas que las variables persistan en pasos posteriores,
-      # puedes usar "echo 'VAR=value' >> $GITHUB_ENV"
+      # Paso 6: Exportar nombres de modelos a variables de entorno
       - name: Set environment variables for spaCy
         run: |
           echo "SPACY_ES_MODEL=es_core_news_sm" >> $GITHUB_ENV
-          echo "SPACY_EN_MODEL=en_core_web_sm" >> $GITHUB_ENV
+          echo "SPACY_EN_MODEL=en_core_news_sm" >> $GITHUB_ENV
 
+      # Paso 7: Decodificar credenciales
       - name: Decode credentials
         run: |
           echo "${{ secrets.SECRET_CREDS_FILE }}" | base64 --decode > credentials.json
         shell: bash
           
-      # ------------------------------------------------------------
-      # EJECUTAR MAIN.PY
-      # ------------------------------------------------------------
+      # Paso 8: Ejecutar main.py
       - name: Run main.py
         env:
           SECRET_FOLDER_ID: ${{ secrets.SECRET_FOLDER_ID }}
@@ -61,20 +66,19 @@ jobs:
         run: |
           python main.py
 
-
-
-      # -------------------------------------------------------
-      # COMMIT AUTOMÁTICO DE LOS MODELOS ACTUALIZADOS
-      # -------------------------------------------------------
-      - name: Commit updated models
+      # Paso 9: Commit automático de modelos actualizados y otros objetos
+      - name: Commit updated models and otros_objetos
         if: success()    # Sólo si todo lo anterior fue exitoso
         run: |
-          git config user.email "actions@github.com"
-          git config user.name "GitHub Actions"
-          
-          # Agregar los posibles cambios (nuevos .pkl en /models)
+          # Añadir cambios en models/ y otros_objetos/
           git add models/
-
-          # Si NO hay cambios, git diff-index saldrá 0 => no comitea
-          git diff --quiet HEAD || git commit -m "chore: update random forest models on $(date)"
-          git push
+          git add otros_objetos/
+    
+          # Obtener los últimos cambios del remoto para evitar conflictos
+          git pull origin main --rebase || true  # '|| true' evita fallar si no hay cambios
+    
+          # Commitear sólo si hay cambios
+          git diff --quiet HEAD || git commit -m "chore: update random forest models on $(date -u)"
+    
+          # Push usando GITHUB_TOKEN (ya configurado por actions/checkout)
+          git push origin main
