@@ -42,14 +42,14 @@ jobs:
       - name: Install spaCy language models
         run: |
           python -m spacy download es_core_news_sm
-          python -m spacy download en_core_news_sm
+          python -m spacy download en_core_web_sm
         shell: bash
 
       # Paso 6: Exportar nombres de modelos a variables de entorno
       - name: Set environment variables for spaCy
         run: |
           echo "SPACY_ES_MODEL=es_core_news_sm" >> $GITHUB_ENV
-          echo "SPACY_EN_MODEL=en_core_news_sm" >> $GITHUB_ENV
+          echo "SPACY_EN_MODEL=en_core_web_sm" >> $GITHUB_ENV
 
       # Paso 7: Decodificar credenciales
       - name: Decode credentials
