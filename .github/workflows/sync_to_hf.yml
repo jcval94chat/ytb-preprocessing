@@ -1,28 +1,15 @@
 name: Sync to Hugging Face hub
 
 on:
-  # 1) Para dispararlo manualmente desde la pestaña "Actions" en GitHub:
   workflow_dispatch:
-
-  # 2) Para dispararlo automáticamente cuando otro workflow (weekly_build) ha finalizado:
   workflow_run:
     workflows: ["weekly_build"] 
-    types: [completed]
+    types:
+      - completed
 
 jobs:
   sync-to-hub:
-    # Ajustamos la condición `if` para que:
-    #   - Se ejecute si es un evento "workflow_run" con éxito
-    #   - O se ejecute si es un "workflow_dispatch" (manual)
-    if: >
-      (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success'
-      )
-      OR
-      (
-        github.event_name == 'workflow_dispatch'
-      )
+    if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     
     steps:
