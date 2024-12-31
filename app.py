@@ -1,33 +1,20 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import json
 import joblib
 import logging
-import os
 import nltk
 nltk.download('stopwords')
 
-from nltk.corpus import stopwords
-from collections import Counter
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from utils.interpret_clusters import generate_features_extended
 
-# from utils.interpret_clusters import generate_features_extended
-# Suponiendo que tienes la función generate_features_extended importada:
-def generate_features_extended(df, title_column='titulo', most_common_words=None):
-    """
-    Ejemplo sencillo de la función generate_features_extended.
-    Retorna (df_features, algo_mas).
-    Aquí lo dejamos muy básico para ilustrar.
-    """
-    # Suponiendo que "most_common_words" es una lista de tuplas (word, freq)
-    # Generaremos features muy simples (longitud, contadores, etc.)
-    df_features = pd.DataFrame()
-    df_features["longitud"] = df[title_column].str.len()
-    # ... Aquí vendría tu lógica real ...
-    return df_features, None
+import os
+from io import StringIO
 
-# Configuración del logging
+# -----------------------------------------------------------------------------
+# CONFIGURACIÓN DE LOGGING
+# -----------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -38,22 +25,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# -----------------------------------
-# CARGA DE OBJETOS ADICIONALES
-# -----------------------------------
-# Ejemplo: supongamos que tienes tus listas JSON de features
-feature_columns = ["longitud"]  # Simplificado
-feature_columns_SH = ["longitud"]  # Simplificado
-palabras_top = {}   # Simplificado
-palabras_top_SH = {}  # Simplificado
-
-# -----------------------------------
-# CACHING DE MODELOS
-# -----------------------------------
+# -----------------------------------------------------------------------------
+# CARGAR MODELOS CON CACHÉ PARA MAYOR RENDIMIENTO
+# -----------------------------------------------------------------------------
 @st.cache_resource
 def load_models():
-    # Carga tus modelos de la carpeta "models"
-    # Aquí ponemos un ejemplo ficticio
     model_shorts_en = joblib.load("models/model_shorts_en.joblib")
     model_shorts_es = joblib.load("models/model_shorts_es.joblib")
     model_videos_en = joblib.load("models/model_videos_en.joblib")
@@ -62,184 +38,194 @@ def load_models():
 
 model_shorts_en, model_shorts_es, model_videos_en, model_videos_es = load_models()
 
-# Función para evaluar una frase con un modelo
+# -----------------------------------------------------------------------------
+# CARGAR OBJETOS ADICIONALES (FEATURES, PALABRAS TOP, ETC.)
+# -----------------------------------------------------------------------------
+with open("otros_objetos/feature_columns.json", "r") as f:
+    feature_columns = json.load(f)
+
+with open("otros_objetos/feature_columns_SH.json", "r") as f:
+    feature_columns_SH = json.load(f)
+
+with open("otros_objetos/palabras_top.json", "r") as f:
+    palabras_top = json.load(f)
+
+with open("otros_objetos/palabras_top_SH.json", "r") as f:
+    palabras_top_SH = json.load(f)
+
+# -----------------------------------------------------------------------------
+# FUNCIÓN PARA EVALUAR UNA FRASE CON UN MODELO DADO
+# -----------------------------------------------------------------------------
 def eval_frase(frase, modelo, tipo="Shorts", idioma="Spanish"):
     """
-    'tipo' puede ser "Shorts" o "Videos".
-    'idioma' puede ser "Spanish" o "English".
+    Evalúa una frase con el modelo específico.
+    Ajusta las columnas para evitar ValueError por mismatch.
     """
+    # 1. Generar DataFrame con la frase
     df_probar = pd.DataFrame({'titulo': [frase], 'language': [idioma]})
 
-    # Generar features (esto depende de tu lógica real)
+    # 2. Generar features
     if tipo == "Shorts":
-        features_2, _ = generate_features_extended(
+        features_temp, _ = generate_features_extended(
             df_probar,
             title_column='titulo',
             most_common_words=[(x, 0) for x in palabras_top_SH.values()]
         )
-        columnas = feature_columns_SH
+        columnas_modelo = feature_columns_SH
     else:  # "Videos"
-        features_2, _ = generate_features_extended(
+        features_temp, _ = generate_features_extended(
             df_probar,
             title_column='titulo',
             most_common_words=[(x, 0) for x in palabras_top.values()]
         )
-        columnas = feature_columns
+        columnas_modelo = feature_columns
 
-    # Suponiendo que es un clasificador con predict_proba
-    proba = modelo.predict_proba(features_2[columnas])
+    # Asegurarnos de que las columnas coincidan exactamente con las que el modelo espera
+    # 1) Creamos cualquier columna faltante con valor 0
+    for col in columnas_modelo:
+        if col not in features_temp.columns:
+            features_temp[col] = 0
+    # 2) Descartamos columnas extra que el modelo no tenga
+    features_temp = features_temp[[c for c in columnas_modelo if c in features_temp.columns]]
+
+    # 3. Hacer predicción (suponiendo que es un RandomForestClassifier)
+    proba = modelo.predict_proba(features_temp)
     score = proba[0][1]
     return float(score)
 
+# -----------------------------------------------------------------------------
+# FUNCIÓN PRINCIPAL DE LA APP
+# -----------------------------------------------------------------------------
 def main():
-    # -----------------------------------
-    # SIDEBAR
-    # -----------------------------------
+    # ---------------
+    # Barra Lateral
+    # ---------------
     st.sidebar.title("Parámetros y Descripción")
-
-    # Descripción
-    st.sidebar.markdown(
+    st.sidebar.write(
         """
-        **Bienvenido(a)**  
-        En esta aplicación puedes:
-        - Evaluar una sola frase con varios modelos.  
-        - Subir un archivo con múltiples frases.  
-        - Descargar los resultados en CSV.  
-
-        **Modelos disponibles**:  
-        - Shorts (ES/EN)  
-        - Videos (ES/EN)
+        ### Sobre la Aplicación
+        - Evalúa títulos con distintos **modelos** (Shorts/Videos, Español/Inglés).
+        - Carga masiva de frases por archivo CSV o TXT.
+        - Descarga de resultados en CSV.
+        - **Nota**: Los modelos usan RandomForestClassifier.
         """
     )
 
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Selecciona los modelos a usar")
+    st.sidebar.write("### Selección de Modelos (Activados por defecto)")
 
-    # Aquí podrías usar toggles si instalas librerías externas. 
-    # De momento, usamos checkboxes (activados por defecto).
+    # Checkboxes en la barra lateral
     usar_shorts_es = st.sidebar.checkbox("Shorts ES", value=True)
     usar_shorts_en = st.sidebar.checkbox("Shorts EN", value=True)
     usar_videos_es = st.sidebar.checkbox("Videos ES", value=True)
     usar_videos_en = st.sidebar.checkbox("Videos EN", value=True)
 
-    st.sidebar.markdown("---")
-
-    # Slider para top_n de la segunda pestaña (en la barra lateral)
-    top_n = st.sidebar.slider("¿Cuántos resultados mostrar?", min_value=1, max_value=100, value=10)
-
-    # -----------------------------------
-    # MAIN TABS
-    # -----------------------------------
+    # ---------------
+    # Contenido Principal
+    # ---------------
     st.title("App de Evaluación de Títulos")
 
-    tab1, tab2 = st.tabs(["Evaluación de UNA Frase", "Evaluación por Archivo"])
+    # Usamos tabs para separar la evaluación individual y la evaluación por archivo
+    tab1, tab2 = st.tabs(["Evaluación Interactiva", "Evaluar Archivo"])
 
-    # ================================
-    # TAB 1: Evaluación Interactiva
-    # ================================
+    # PESTAÑA 1 ----------------------------------------------------------------------------------
     with tab1:
-        st.header("Evaluar una sola frase")
-        frase = st.text_input("Ingresa el título", value="Los 5 Secretos del Liderazgo Efectivo")
+        st.header("Ventana 1: Evaluación de una Frase")
+
+        # Entrada de texto
+        frase = st.text_input("Ingresa el título:", "Los 5 Secretos del Liderazgo Efectivo")
 
         if st.button("Evaluar Frase"):
-            with st.spinner("Evaluando la frase..."):
-                # Calculamos cada modelo que esté activo
-                score_sh_es = eval_frase(frase, model_shorts_es, "Shorts", "Spanish") if usar_shorts_es else None
-                score_sh_en = eval_frase(frase, model_shorts_en, "Shorts", "English") if usar_shorts_en else None
-                score_v_es  = eval_frase(frase, model_videos_es, "Videos", "Spanish") if usar_videos_es else None
-                score_v_en  = eval_frase(frase, model_videos_en, "Videos", "English") if usar_videos_en else None
+            # Para evitar repeticiones, guardamos los scores en un dict
+            scores_dict = {
+                "Shorts ES": None,
+                "Shorts EN": None,
+                "Videos ES": None,
+                "Videos EN": None
+            }
 
-            # Mostramos en un DataFrame
-            df_result = pd.DataFrame({
-                "Shorts ES": [score_sh_es],
-                "Shorts EN": [score_sh_en],
-                "Videos ES": [score_v_es],
-                "Videos EN": [score_v_en]
-            })
-            st.write("### Resultado para la frase ingresada")
-            st.dataframe(df_result, use_container_width=True)
+            with st.spinner("Evaluando..."):
+                # Calculamos cada modelo, si está activo
+                if usar_shorts_es:
+                    scores_dict["Shorts ES"] = eval_frase(frase, model_shorts_es, "Shorts", "Spanish")
+                if usar_shorts_en:
+                    scores_dict["Shorts EN"] = eval_frase(frase, model_shorts_en, "Shorts", "English")
+                if usar_videos_es:
+                    scores_dict["Videos ES"] = eval_frase(frase, model_videos_es, "Videos", "Spanish")
+                if usar_videos_en:
+                    scores_dict["Videos EN"] = eval_frase(frase, model_videos_en, "Videos", "English")
 
-            # (Opcional) Botón para descargar este resultado en CSV
-            csv_data = df_result.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="Descargar resultado (CSV)",
-                data=csv_data,
-                file_name="resultado_frase.csv",
-                mime="text/csv"
-            )
+            # Convertimos a DataFrame
+            df_result_individual = pd.DataFrame([scores_dict])
+            st.subheader("Resultados de la evaluación")
+            st.dataframe(df_result_individual, use_container_width=True)
 
-    # ================================
-    # TAB 2: Evaluación por Archivo
-    # ================================
+    # PESTAÑA 2 ----------------------------------------------------------------------------------
     with tab2:
-        st.header("Evaluar un archivo con frases")
-        st.write("Sube un archivo CSV o TXT con **una frase por renglón**.")
+        st.header("Ventana 2: Evaluar por Archivo")
 
-        # Subir archivo
-        archivo_subido = st.file_uploader("Selecciona archivo (CSV o TXT)", type=["csv", "txt"])
+        # Sube un archivo CSV o TXT
+        archivo_subido = st.file_uploader("Sube tu archivo CSV o TXT (1 frase por línea)", type=["csv", "txt"])
+
+        # Slider para definir cuántos resultados mostrar (1 a 100)
+        top_n = st.slider("¿Cuántos resultados quieres ver?", min_value=1, max_value=100, value=10)
 
         if archivo_subido is not None:
-            # Intentamos leerlo como CSV
+            # Intentamos leer el archivo
             try:
                 df_frases = pd.read_csv(archivo_subido, header=None, names=["frase"])
             except:
-                # Si falla, tal vez es TXT
+                # Si falla, leemos como TXT
                 archivo_subido.seek(0)
                 lineas = archivo_subido.read().decode("utf-8").splitlines()
                 df_frases = pd.DataFrame({"frase": lineas})
 
-            st.write(f"**Se han cargado {len(df_frases)} frases.**")
+            st.write(f"**Se cargaron {len(df_frases)} frases.**")
 
             if st.button("Evaluar Archivo"):
-                with st.spinner("Evaluando todas las frases..."):
-                    resultados = []
-                    for i, row in df_frases.iterrows():
-                        frase_texto = row["frase"]
-                        # Calcular los scores, 0 si no se usa o None para distinguir
-                        s_sh_es = eval_frase(frase_texto, model_shorts_es, "Shorts", "Spanish") if usar_shorts_es else None
-                        s_sh_en = eval_frase(frase_texto, model_shorts_en, "Shorts", "English") if usar_shorts_en else None
-                        s_v_es  = eval_frase(frase_texto, model_videos_es,  "Videos", "Spanish") if usar_videos_es else None
-                        s_v_en  = eval_frase(frase_texto, model_videos_en,  "Videos", "English") if usar_videos_en else None
+                # Estructura para resultados
+                resultados = []
 
-                        # Suma el valor numérico, asumiendo 0 cuando es None
-                        total_score = (s_sh_es or 0) + (s_sh_en or 0) + (s_v_es or 0) + (s_v_en or 0)
+                with st.spinner("Procesando archivo..."):
+                    for frase_texto in df_frases["frase"]:
+                        # Inicializamos valores
+                        s_shorts_es = eval_frase(frase_texto, model_shorts_es, "Shorts", "Spanish") if usar_shorts_es else 0.0
+                        s_shorts_en = eval_frase(frase_texto, model_shorts_en, "Shorts", "English") if usar_shorts_en else 0.0
+                        s_videos_es = eval_frase(frase_texto, model_videos_es, "Videos", "Spanish") if usar_videos_es else 0.0
+                        s_videos_en = eval_frase(frase_texto, model_videos_en, "Videos", "English") if usar_videos_en else 0.0
 
+                        score_total = s_shorts_es + s_shorts_en + s_videos_es + s_videos_en
                         resultados.append({
                             "frase": frase_texto,
-                            "Shorts ES": s_sh_es,
-                            "Shorts EN": s_sh_en,
-                            "Videos ES": s_v_es,
-                            "Videos EN": s_v_en,
-                            "Score Total": total_score
+                            "Shorts ES": s_shorts_es if usar_shorts_es else None,
+                            "Shorts EN": s_shorts_en if usar_shorts_en else None,
+                            "Videos ES": s_videos_es if usar_videos_es else None,
+                            "Videos EN": s_videos_en if usar_videos_en else None,
+                            "Score Total": score_total
                         })
 
-                # Ordenar por score total descendente
+                # Ordenamos por 'Score Total' de mayor a menor
                 resultados_ordenados = sorted(resultados, key=lambda x: x["Score Total"], reverse=True)
-                # Tomar top_n
+                # Tomamos top_n
                 top_n_resultados = resultados_ordenados[:top_n]
 
-                # Convertir a DataFrame
                 df_top = pd.DataFrame(top_n_resultados)
-                st.write(f"### Mejores {top_n} resultados")
+                st.subheader(f"Top {top_n} resultados")
                 st.dataframe(df_top, use_container_width=True)
 
-                # Botón para descargar resultados
-                csv_full = pd.DataFrame(resultados_ordenados).to_csv(index=False).encode("utf-8")
+                # -------------------------------------------------------
+                # OPCIÓN: DESCARGAR RESULTADOS COMO CSV
+                # -------------------------------------------------------
+                csv_buffer = StringIO()
+                df_top.to_csv(csv_buffer, index=False)
                 st.download_button(
-                    label="Descargar TODOS los resultados (CSV)",
-                    data=csv_full,
-                    file_name="resultados_completos.csv",
+                    label="Descargar CSV de Resultados",
+                    data=csv_buffer.getvalue(),
+                    file_name="resultados.csv",
                     mime="text/csv"
                 )
 
-                # (Opcional) Si solo quieres descargar el top_n
-                csv_top = df_top.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    label=f"Descargar TOP {top_n} resultados (CSV)",
-                    data=csv_top,
-                    file_name=f"top_{top_n}_resultados.csv",
-                    mime="text/csv"
-                )
-
+# -----------------------------------------------------------------------------
+# EJECUCIÓN PRINCIPAL
+# -----------------------------------------------------------------------------
 if __name__ == "__main__":
     main()
