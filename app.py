@@ -16,13 +16,21 @@ model_shorts_es = pickle.load(open("models/model_shorts_es.pkl", "rb"))
 model_videos_en = pickle.load(open("models/model_videos_en.pkl", "rb"))
 model_videos_es = pickle.load(open("models/model_videos_es.pkl", "rb"))
 
-# Ajusta estos a tu realidad
-# feature_columns = [...]  # Lista con las columnas que usas
-# palabras_top = {...}     # Diccionario, si lo necesitas
-feature_columns = joblib.load("otros_objetos/feature_columns.pkl")
-palabras_top = joblib.load("otros_objetos/palabras_top.pkl")
-feature_columns_SH = joblib.load("otros_objetos/feature_columns_SH.pkl")
-palabras_top_SH = joblib.load("otros_objetos/palabras_top_SH.pkl")
+# -----------------------------------
+# CARGA DE OBJETOS ADICIONALES (JSON)
+# -----------------------------------
+with open("otros_objetos/feature_columns.json", "r") as f:
+    feature_columns = json.load(f)
+
+with open("otros_objetos/feature_columns_SH.json", "r") as f:
+    feature_columns_SH = json.load(f)
+
+with open("otros_objetos/palabras_top.json", "r") as f:
+    palabras_top = json.load(f)
+
+with open("otros_objetos/palabras_top_SH.json", "r") as f:
+    palabras_top_SH = json.load(f)
+
 
 def generate_features_extended(df, title_column, most_common_words=None):
     """
