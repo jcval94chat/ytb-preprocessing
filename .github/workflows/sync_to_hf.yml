@@ -2,10 +2,11 @@ name: Sync to Hugging Face hub
 
 on:
   workflow_run:
-    workflows: ["weekly_build"]  # Debe coincidir con el nombre exacto del workflow
+    workflows: ["Weekly Build"]  # Debe coincidir con el nombre exacto del workflow
     types:
       - completed
-
+  workflow_dispatch:  # Permite ejecución manual
+  
 jobs:
   sync-to-hub:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
