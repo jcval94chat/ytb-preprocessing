@@ -32,21 +32,23 @@ jobs:
         run: |
           git config lfs.locksverify false
 
-      # 4. Configurar información de usuario Git
+      # 4. Permitir pushes incompletos de LFS (Riesgoso)
+      - name: Allow incomplete LFS pushes
+        run: |
+          git config lfs.allowincompletepush true
+
+      # 5. Configurar información de usuario Git
       - name: Set up Git config
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      # 5. Configurar la URL remota con el token de Hugging Face
+      # 6. Configurar la URL remota con el token de Hugging Face
       - name: Set remote URL with HF token
         run: |
           git remote set-url origin "https://jcval94chat:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/jcval94chat/best-title"
 
-      # 6. Asegurarse de que todos los objetos LFS se suban al remoto
-      - name: Push all LFS objects
-        run: git lfs push --all origin
-
       # 7. Forzar el push al branch main en Hugging Face
       - name: Push to Hugging Face hub
-        run: git push --force origin main
+        run: |
+          git push --force origin main
