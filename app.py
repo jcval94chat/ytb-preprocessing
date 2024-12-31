@@ -9,6 +9,9 @@ from collections import Counter
 # Importar tu lógica de features si la tienes en utils/
 from utils.interpret_clusters import generate_features_extended
 
+import nltk
+nltk.download('stopwords')
+
 # -----------------------------------
 # CARGA DE MODELOS (.pkl)
 # -----------------------------------
