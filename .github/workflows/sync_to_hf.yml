@@ -1,11 +1,11 @@
 name: Sync to Hugging Face hub
 
 on:
-  workflow_dispatch:  # Para lanzarlo manualmente
+  workflow_dispatch:  # Permite ejecutar el workflow manualmente
   workflow_run:
     workflows: ["weekly_build"] 
     types:
-      - completed
+      - completed  # Ejecuta este workflow cuando 'weekly_build' finaliza
 
 jobs:
   sync-to-hub:
@@ -13,34 +13,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout del repositorio con soporte para LFS
       - name: Checkout repository (with LFS)
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
 
-      - name: Install Git LFS (explicit)
+      # 2. Instalación explícita de Git LFS
+      - name: Install Git LFS
         run: |
           sudo apt-get update
           sudo apt-get install -y git-lfs
           git lfs install
 
-      # (Opcional) Verificar que los archivos .pkl están siendo rastreados por LFS
-      - name: Verify LFS files
-        run: git lfs ls-files
+      # 3. Deshabilitar la verificación de bloqueo de LFS para Hugging Face
+      - name: Disable LFS locking for Hugging Face
+        run: |
+          git config lfs.locksverify false
 
-      - name: Push to Hugging Face hub
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      # 4. Configurar información de usuario Git
+      - name: Set up Git config
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Ajusta tu remote para apuntar a HF con tu token
-          git remote set-url origin "https://<TU_USER>:${HF_TOKEN}@huggingface.co/spaces/<TU_USER>/best-title"
-          
-          # Para asegurarte de que suba todos los objetos LFS (por si algo quedó pendiente):
-          git lfs push --all origin
-          
-          # Finalmente, push (forzado si lo necesitas):
-          git push --force origin main
+
+      # 5. Configurar la URL remota con el token de Hugging Face
+      - name: Set remote URL with HF token
+        run: |
+          git remote set-url origin "https://jcval94chat:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/jcval94chat/best-title"
+
+      # 6. Asegurarse de que todos los objetos LFS se suban al remoto
+      - name: Push all LFS objects
+        run: git lfs push --all origin
+
+      # 7. Forzar el push al branch main en Hugging Face
+      - name: Push to Hugging Face hub
+        run: git push --force origin main
