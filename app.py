@@ -5,6 +5,8 @@ import pandas as pd
 import json
 from nltk.corpus import stopwords
 from collections import Counter
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
 
 # Importar tu lógica de features si la tienes en utils/
 from utils.interpret_clusters import generate_features_extended
@@ -19,6 +21,22 @@ model_shorts_en = pickle.load(open("models/model_shorts_en.pkl", "rb"))
 model_shorts_es = pickle.load(open("models/model_shorts_es.pkl", "rb"))
 model_videos_en = pickle.load(open("models/model_videos_en.pkl", "rb"))
 model_videos_es = pickle.load(open("models/model_videos_es.pkl", "rb"))
+
+# Función para verificar el tipo de modelo
+def verificar_tipo_modelo(model, nombre_modelo):
+    if isinstance(model, RandomForestClassifier):
+        tipo = "RandomForestClassifier"
+    elif isinstance(model, RandomForestRegressor):
+        tipo = "RandomForestRegressor"
+    else:
+        tipo = type(model).__name__
+    print(f"El modelo '{nombre_modelo}' es de tipo: {tipo}")
+
+# Verificar cada modelo
+verificar_tipo_modelo(model_shorts_en, "model_shorts_en")
+verificar_tipo_modelo(model_shorts_es, "model_shorts_es")
+verificar_tipo_modelo(model_videos_en, "model_videos_en")
+verificar_tipo_modelo(model_videos_es, "model_videos_es")
 
 # -----------------------------------
 # CARGA DE OBJETOS ADICIONALES (JSON)
