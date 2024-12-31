@@ -3,6 +3,8 @@ import streamlit as st
 import pickle
 import pandas as pd
 import json
+from nltk.corpus import stopwords
+from collections import Counter
 
 # Importar tu lógica de features si la tienes en utils/
 from utils.interpret_clusters import generate_features_extended
