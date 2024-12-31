@@ -5,9 +5,7 @@ import pandas as pd
 import json
 
 # Importar tu lógica de features si la tienes en utils/
-# from utils.text_processing import generate_features_extended
-# from utils.model_utils import feature_columns, palabras_top
-# etc...
+from utils.text_processing import generate_features_extended
 
 # -----------------------------------
 # CARGA DE MODELOS (.pkl)
