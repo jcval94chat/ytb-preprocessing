@@ -33,14 +33,6 @@ with open("otros_objetos/palabras_top_SH.json", "r") as f:
     palabras_top_SH = json.load(f)
 
 
-def generate_features_extended(df, title_column, most_common_words=None):
-    """
-    Implementación real de tu función, o impórtala desde utils.
-    Debe retornar (features, palabras_top_2).
-    """
-    # ...
-    return features, palabras_top_2
-
 def eval_frase(frase, idioma="Spanish", tipo="Shorts"):
     """
     Evalúa la frase usando uno de los cuatro modelos, según el idioma y tipo.
