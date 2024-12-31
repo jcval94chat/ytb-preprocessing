@@ -216,11 +216,10 @@ def main():
     if not os.path.exists("models"):
         os.makedirs("models")
     
-    joblib.dump(lista_modelos[0], "models/model_videos_es.pkl")
-    joblib.dump(lista_modelos[1], "models/model_videos_en.pkl")
-
-    joblib.dump(lista_modelos_SH[0], "models/model_shorts_es.pkl")
-    joblib.dump(lista_modelos_SH[1], "models/model_shorts_en.pkl")
+    joblib.dump(lista_modelos[0], "models/model_videos_es.joblib")
+    joblib.dump(lista_modelos[1], "models/model_videos_en.joblib")
+    joblib.dump(lista_modelos_SH[0], "models/model_shorts_es.joblib")
+    joblib.dump(lista_modelos_SH[1], "models/model_shorts_en.joblib")
 
     logger.info("¡Modelos guardados (o actualizados) en la carpeta 'models/'!")
 
