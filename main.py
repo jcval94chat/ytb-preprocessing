@@ -211,10 +211,28 @@ def main():
     logger.info("¡Modelos guardados (o actualizados) en la carpeta 'models/'!")
 
     # Opción binaria (pickle)
-    joblib.dump(feature_columns, "otros_objetos/feature_columns.pkl")
-    joblib.dump(feature_columns_SH, "otros_objetos/feature_columns_SH.pkl")
-    joblib.dump(palabras_top, "otros_objetos/palabras_top.pkl")
-    joblib.dump(palabras_top_SH, "otros_objetos/palabras_top_SH.pkl")
+    # joblib.dump(feature_columns, "otros_objetos/feature_columns.pkl")
+    # joblib.dump(feature_columns_SH, "otros_objetos/feature_columns_SH.pkl")
+    # joblib.dump(palabras_top, "otros_objetos/palabras_top.pkl")
+    # joblib.dump(palabras_top_SH, "otros_objetos/palabras_top_SH.pkl")
+
+    # Asegúrate de que la carpeta existe
+    if not os.path.exists("models"):
+        os.makedirs("otros_objetos")
+    
+    # Guardar como JSON
+    with open("otros_objetos/feature_columns.json", "w") as f:
+        json.dump(feature_columns, f)
+    
+    with open("otros_objetos/feature_columns_SH.json", "w") as f:
+        json.dump(feature_columns_SH, f)
+    
+    with open("otros_objetos/palabras_top.json", "w") as f:
+        json.dump(palabras_top, f)
+    
+    with open("otros_objetos/palabras_top_SH.json", "w") as f:
+        json.dump(palabras_top_SH, f)
+
 
 # ----------------------------------------------------------------------------
 # EJECUCIÓN
