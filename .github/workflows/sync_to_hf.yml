@@ -1,7 +1,7 @@
 name: Sync to Hugging Face hub
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Permite la ejecución manual
   workflow_run:
     workflows: ["weekly_build"] 
     types:
@@ -11,14 +11,28 @@ jobs:
   sync-to-hub:
     if: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
-    
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
-      
-      - name: Push to hub
+
+      - name: Install Git LFS
+        run: |
+          sudo apt-get update
+          sudo apt-get install git-lfs
+          git lfs install
+
+      - name: Verify LFS files
+        run: git lfs ls-files
+
+      - name: Push to Hugging Face hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push --force https://jcval94chat:$HF_TOKEN@huggingface.co/spaces/jcval94chat/best-title main
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://jcval94chat:${HF_TOKEN}@huggingface.co/spaces/jcval94chat/best-title
+          git push --force origin main
