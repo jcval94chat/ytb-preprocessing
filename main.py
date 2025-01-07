@@ -142,7 +142,7 @@ def main():
 
     # 5.1. Top & bottom videos por canal (VIDEOS)
     top_5, bottom_5 = get_top_bottom_videos(
-        df_S_df_, channel_column="channel_name", metric_column="LongTerm_Success", top_n=6
+        df_S_df_, channel_column="channel_name", metric_column="LongTerm_Success", top_n=8
     )
     Extreme_Titles = pd.concat([top_5, bottom_5], axis=0).drop_duplicates(subset=['channel_name','title'])
     logger.info(f"Se extrajeron Extreme_Titles (VIDEOS) => {Extreme_Titles.shape}")
