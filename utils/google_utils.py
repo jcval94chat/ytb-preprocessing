@@ -110,6 +110,11 @@ def upload_dataframe_to_google_sheet(df, creds_file, spreadsheet_id, sheet_name=
     """
     try:
         df_sanitized = sanitize_dataframe(df)
+
+        # Información de los primeros 3 registros
+        preview_data = df_sanitized.head(3)
+        logging.info(f"Primeros 3 registros del DataFrame:\n{preview_data}")
+        
         credentials = authenticate_google_services(creds_file)
         client = gspread.authorize(credentials)
 
