@@ -113,10 +113,20 @@ def main():
 
     logger.info(f"Dimensiones iniciales del DataFrame: {combined_df.shape}")
 
+    logger.info(f"Columnas iniciales del DataFrame: {combined_df.columns}")
+
     # 3. Ejemplo: eliminar duplicados
     logger.info("Eliminando duplicados por ['video_id','execution_date']...")
+    combined_df.sort_values("execution_date", ascending=False, inplace=True)
     combined_df.drop_duplicates(subset=['video_id','execution_date'], inplace=True)
     logger.info(f"Dimensiones tras drop_duplicates: {combined_df.shape}")
+    # Obtener el primer registro
+    first_record = combined_df.iloc[0]
+    
+    # Crear el string con el formato deseado
+    first_record_str = ", ".join([f'"{col}": {first_record[col]}' for col in combined_df.columns])
+
+    logger.info(f"Registro mas reciente: {first_record_str}")
 
     # 4.2. Eliminar duplicados por ['title','upload_date','channel_name']
     combined_df.drop_duplicates(subset=['title','upload_date','channel_name'], inplace=True)
