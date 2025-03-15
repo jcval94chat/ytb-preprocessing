@@ -108,6 +108,7 @@ def upload_dataframe_to_google_sheet(df, creds_file, spreadsheet_id, sheet_name=
     """
     Sube un DataFrame de pandas a una hoja de cálculo de Google Sheets.
     """
+    time.sleep(30)
     try:
         df_sanitized = sanitize_dataframe(df)
 
