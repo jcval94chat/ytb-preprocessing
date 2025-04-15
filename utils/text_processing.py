@@ -119,7 +119,7 @@ def get_best_words_df(df_VIDEOS, stopw=False):
 # Sub-funciones de unificación de palabras, etc.
 # ---------------------------------------------------------------------
 
-def unify_repeated_words(mejores_palabras, top_n=50):
+def unify_repeated_words(mejores_palabras, top_n=150):
     """
     Consolida palabras más repetidas de las categorías (title, tags, description).
     """
