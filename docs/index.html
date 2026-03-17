@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Análisis técnico — ytb-preprocessing</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a30;
+      --panel-2: #1a2440;
+      --text: #e8ecf8;
+      --muted: #a8b1c9;
+      --accent: #6ea8fe;
+      --ok: #3ddc97;
+      --warn: #ffcc66;
+      --risk: #ff6b7a;
+      --border: #2a365d;
+      --chip: #24345f;
+      --shadow: 0 10px 24px rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #090e1d, #0b1020 20%);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container { width: min(1200px, 92vw); margin: 0 auto; }
+    header { padding: 56px 0 24px; }
+    h1 { margin: 0 0 10px; font-size: clamp(1.8rem, 4vw, 3rem); }
+    h2 { margin: 0 0 12px; font-size: 1.45rem; }
+    h3 { margin: 8px 0; font-size: 1.1rem; }
+    p, li { color: var(--muted); }
+    .subtitle { font-size: 1.1rem; max-width: 900px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .chip {
+      background: var(--chip);
+      border: 1px solid var(--border);
+      color: #d9e6ff;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: .86rem;
+      white-space: nowrap;
+    }
+    .grid { display: grid; gap: 16px; }
+    .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (max-width: 900px) { .g2, .g3 { grid-template-columns: 1fr; } }
+    section { margin: 20px 0; }
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    code { color: #d7e8ff; background: #17233f; padding: 2px 6px; border-radius: 6px; }
+    pre {
+      background: #0c142a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      overflow: auto;
+      font-size: .88rem;
+      color: #d7e8ff;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { border: 1px solid var(--border); padding: 10px; vertical-align: top; }
+    th { text-align: left; background: #172445; color: #dce7ff; }
+    .tag { font-size: .74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .t-ok { background: rgba(61,220,151,.15); color: var(--ok); border: 1px solid rgba(61,220,151,.3); }
+    .t-inf { background: rgba(255,204,102,.16); color: var(--warn); border: 1px solid rgba(255,204,102,.34); }
+    .callout { border-left: 4px solid var(--risk); padding: 10px 12px; background: #2b1520; border-radius: 8px; }
+    .small { font-size: .83rem; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .toc a { color: #bcd6ff; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .svg-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 12px; padding: 8px; background: #0c1428; }
+    .numlist li { margin-bottom: 8px; }
+    footer { padding: 26px 0 50px; color: #8f9dc0; }
+  </style>
+</head>
+<body>
+  <header class="container" id="hero">
+    <h2 style="margin:0 0 8px; font-size:1rem; color:#9fb4e5;">1) Hero</h2>
+    <h1>Análisis técnico profundo del repositorio <span class="mono">ytb-preprocessing</span></h1>
+    <p class="subtitle">Pipeline de analítica y modelado para títulos de YouTube que ingiere métricas desde Google Sheets, entrena/actualiza modelos (Videos y Shorts, ES/EN), y expone una app Streamlit para scoring de títulos.</p>
+    <div class="chips">
+      <span class="chip">Tipo: ETL + ML pipeline + App de inferencia</span>
+      <span class="chip">Lenguajes: Python</span>
+      <span class="chip">Runtime: Python 3.x + Streamlit</span>
+      <span class="chip">Complejidad: Media-Alta (módulos acoplados + dependencias externas)</span>
+      <span class="chip">Confianza del análisis: Alta (código fuente principal revisado)</span>
+    </div>
+  </header>
+
+  <main class="container grid">
+    <section class="card toc">
+      <h2>Navegación</h2>
+      <div class="grid g3 small">
+        <a href="#resumen">2. Resumen ejecutivo</a>
+        <a href="#arquitectura">3. Arquitectura general</a>
+        <a href="#flujo">4. Flujo completo del dato</a>
+        <a href="#componentes">5. Componentes principales</a>
+        <a href="#entrypoints">6. Entrypoints reales</a>
+        <a href="#interfaces">7. Interfaces y datos</a>
+        <a href="#ejecucion">8. Ejecución y despliegue</a>
+        <a href="#deps">9. Dependencias importantes</a>
+        <a href="#caso">10. Caso práctico narrado</a>
+        <a href="#riesgos">11. Riesgos y puntos ciegos</a>
+        <a href="#evidencia">12. Evidencia técnica</a>
+      </div>
+    </section>
+
+    <section id="resumen" class="card">
+      <h2>2) Resumen ejecutivo</h2>
+      <p>El repositorio implementa dos caras del sistema:</p>
+      <ul>
+        <li><strong>Backoffice/pipeline</strong> (<code>main.py</code>): extrae datos de múltiples Google Sheets en una carpeta de Drive, limpia/filtra duplicados, calcula métricas por día, detecta idioma, calcula señales de éxito, clusteriza e interpreta títulos, sube resultados a hojas de salida y guarda artefactos de modelos/objetos en disco.</li>
+        <li><strong>Producto de inferencia</strong> (<code>app.py</code>): app Streamlit que carga modelos ya entrenados y puntúa títulos individuales o lotes (CSV/TXT), devolviendo ranking descargable.</li>
+      </ul>
+      <p>Problema que resuelve: priorizar y optimizar títulos de YouTube (Videos y Shorts) con heurísticas lingüísticas + modelos supervisados, segmentados por idioma.</p>
+      <p><span class="tag t-ok">Hecho confirmado</span> La lógica central de negocio está en <code>main.py</code> (entrenamiento/actualización) y <code>app.py</code> (scoring en runtime).</p>
+    </section>
+
+    <section id="arquitectura" class="card">
+      <h2>3) Arquitectura general</h2>
+      <div class="svg-wrap">
+        <svg width="1100" height="360" viewBox="0 0 1100 360" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <style>
+              .b{fill:#1a2748;stroke:#375089;stroke-width:1.4}.t{fill:#dce7ff;font:13px sans-serif}.s{fill:#95abd8;font:12px sans-serif}.a{stroke:#6ea8fe;stroke-width:2;marker-end:url(#m)}
+            </style>
+            <marker id="m" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#6ea8fe"/></marker>
+          </defs>
+          <rect class="b" x="20" y="40" width="190" height="80" rx="10"/><text class="t" x="36" y="70">Google Drive Folder</text><text class="s" x="36" y="92">(múltiples Sheets)</text>
+          <rect class="b" x="260" y="30" width="220" height="100" rx="10"/><text class="t" x="278" y="60">main.py pipeline</text><text class="s" x="278" y="82">ingesta, limpieza, features,</text><text class="s" x="278" y="100">modelado e interpretación</text>
+          <rect class="b" x="540" y="20" width="230" height="110" rx="10"/><text class="t" x="558" y="50">utils/*</text><text class="s" x="558" y="72">google_utils / text_processing</text><text class="s" x="558" y="90">model_utils / interpret_clusters</text>
+          <rect class="b" x="840" y="30" width="230" height="100" rx="10"/><text class="t" x="858" y="62">Google Sheets destino</text><text class="s" x="858" y="84">(titulos, clusters, palabras)</text>
+
+          <rect class="b" x="260" y="210" width="220" height="100" rx="10"/><text class="t" x="278" y="240">Artefactos locales</text><text class="s" x="278" y="262">models/*.joblib</text><text class="s" x="278" y="280">otros_objetos/*.json</text>
+          <rect class="b" x="540" y="210" width="230" height="100" rx="10"/><text class="t" x="558" y="240">app.py (Streamlit)</text><text class="s" x="558" y="262">carga artefactos y scorea</text><text class="s" x="558" y="280">título suelto / lote</text>
+          <rect class="b" x="840" y="210" width="230" height="100" rx="10"/><text class="t" x="858" y="240">Usuario analista</text><text class="s" x="858" y="262">UI + descarga CSV</text>
+
+          <line class="a" x1="210" y1="80" x2="260" y2="80"/>
+          <line class="a" x1="480" y1="80" x2="540" y2="80"/>
+          <line class="a" x1="770" y1="80" x2="840" y2="80"/>
+          <line class="a" x1="370" y1="130" x2="370" y2="210"/>
+          <line class="a" x1="480" y1="260" x2="540" y2="260"/>
+          <line class="a" x1="770" y1="260" x2="840" y2="260"/>
+        </svg>
+      </div>
+    </section>
+
+    <section id="flujo" class="card">
+      <h2>4) Flujo completo del dato (end-to-end)</h2>
+      <ol class="numlist">
+        <li><strong>Trigger:</strong> ejecución de <code>python main.py</code> con variables de entorno de Google/IDs disponibles.</li>
+        <li><strong>Entrada:</strong> <code>get_sheets_data_from_folder()</code> lista archivos de Drive, filtra por timestamp del nombre, lee worksheet 0 por archivo y concatena DataFrames.</li>
+        <li><strong>Validaciones/limpieza:</strong> deduplicación por <code>video_id+execution_date</code> y luego por <code>title+upload_date+channel_name</code>; split Shorts/Videos por <code>duration_seconds</code> ≤ 62.</li>
+        <li><strong>Transformaciones:</strong> detección de idioma, cálculo de métricas diarias, extracción de mejores palabras, top/bottom por canal y cálculo de métricas de éxito.</li>
+        <li><strong>Reglas de negocio ML:</strong> entrenamiento y generación de features para clasificación de títulos; clusterización/interpretación con <code>InsideForest</code>.</li>
+        <li><strong>Persistencia:</strong> subida opcional de tablas de salida a Google Sheets; guardado local de modelos <code>.joblib</code> y catálogos JSON de features/palabras.</li>
+        <li><strong>Consumo:</strong> <code>app.py</code> carga esos artefactos y expone scoring de probabilidad vía <code>predict_proba</code> para 4 modelos (Shorts/Videos × ES/EN).</li>
+        <li><strong>Errores/logs/reintentos:</strong> logging a archivo+consola, manejo de excepciones en lectura/subida Sheets, y <code>sleep</code> de throttling antes de uploads.</li>
+      </ol>
+      <pre>Fuente de datos (Drive/Sheets) 
+  -> Ingesta y unión 
+  -> Limpieza/deduplicación 
+  -> Enriquecimiento (idioma + métricas) 
+  -> Modelado/interpretación (InsideForest + RF)
+  -> Outputs: {Google Sheets, models/*.joblib, otros_objetos/*.json}
+  -> App Streamlit de inferencia y ranking de títulos</pre>
+    </section>
+
+    <section id="componentes" class="card">
+      <h2>5) Componentes principales</h2>
+      <div style="overflow:auto">
+      <table>
+        <thead><tr><th>Componente</th><th>Ruta/archivo</th><th>Responsabilidad</th><th>Entradas</th><th>Salidas</th><th>Dependencias</th><th>Criticidad</th></tr></thead>
+        <tbody>
+          <tr><td>Pipeline batch</td><td><code>main.py</code></td><td>Orquesta ingesta, limpieza, entrenamiento, interpretación y publicación.</td><td>Sheets + env vars</td><td>Sheets de salida + modelos + JSON</td><td>utils/*, spaCy, NLTK, InsideForest</td><td>Alta</td></tr>
+          <tr><td>UI de inferencia</td><td><code>app.py</code></td><td>Scoring de títulos interactivo y por archivo.</td><td>Título texto o CSV/TXT</td><td>Tabla de scores + CSV descargable</td><td>Streamlit, joblib, interpret_clusters</td><td>Alta</td></tr>
+          <tr><td>Conector Google</td><td><code>utils/google_utils.py</code></td><td>Auth, lectura masiva de Sheets y upload de DataFrames.</td><td>Credenciales JSON + IDs</td><td>DataFrames y escrituras en Sheets</td><td>gspread, Google API</td><td>Alta</td></tr>
+          <tr><td>Texto y métricas</td><td><code>utils/text_processing.py</code></td><td>Idioma, métricas diarias, top/bottom por canal.</td><td>DataFrame bruto</td><td>DataFrame enriquecido</td><td>langdetect, pandas</td><td>Alta</td></tr>
+          <tr><td>Modelado palabras</td><td><code>utils/model_utils.py</code></td><td>TF-IDF + RandomForestRegressor para señales de texto.</td><td>DataFrame por idioma</td><td>Mejores combinaciones de texto</td><td>scikit-learn, spaCy</td><td>Media-Alta</td></tr>
+          <tr><td>Interpretación clusters</td><td><code>utils/interpret_clusters.py</code></td><td>Features engineered, clasificación, clusters y descripciones.</td><td>df_S_dict por idioma</td><td>Clusters, títulos extremos, modelos</td><td>InsideForest, sklearn</td><td>Alta</td></tr>
+          <tr><td>Artefactos ML</td><td><code>models/*</code>, <code>otros_objetos/*</code></td><td>Modelos y metadatos para inferencia.</td><td>Entrenamiento previo</td><td>Consumo por app.py</td><td>joblib/json</td><td>Alta</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <section id="entrypoints" class="card">
+      <h2>6) Entrypoints reales</h2>
+      <ul>
+        <li><code>main.py::__main__</code> → ejecuta <code>main()</code> para pipeline batch completo.</li>
+        <li><code>app.py::__main__</code> → arranca UI Streamlit; además en despliegue HF usa <code>app_file: app.py</code> según frontmatter del README.</li>
+        <li>Funciones clave invocadas como sub-entrypoints: <code>get_sheets_data_from_folder</code>, <code>upload_dataframe_to_google_sheet</code>, <code>get_best_words_df</code>, <code>get_model_interpret</code>, <code>eval_frase</code>.</li>
+      </ul>
+      <p><span class="tag t-inf">Inferencia</span> No hay cron/workflow CI/CD versionado en este repo; la ejecución automática probablemente vive fuera (GitHub Actions externo, scheduler o ejecución manual).</p>
+    </section>
+
+    <section id="interfaces" class="card">
+      <h2>7) Interfaces y movimiento de datos</h2>
+      <div class="grid g2">
+        <div>
+          <h3>APIs / servicios</h3>
+          <ul>
+            <li>Google Drive API v3 (<code>files().list</code>)</li>
+            <li>Google Sheets vía <code>gspread</code> (lectura y escritura)</li>
+          </ul>
+          <h3>Almacenamientos</h3>
+          <ul>
+            <li>Google Sheets (fuente y destino)</li>
+            <li>Filesystem local: <code>models/</code>, <code>otros_objetos/</code>, logs</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Formatos / contratos</h3>
+          <ul>
+            <li>Entrada tabular: columnas esperadas como <code>title</code>, <code>description</code>, <code>duration_seconds</code>, <code>views</code>, <code>likes</code>, <code>comments</code>, <code>upload_date</code>, <code>execution_date</code>.</li>
+            <li>Artefactos: <code>.joblib</code> (modelos), <code>.json</code> (feature columns / palabras top).</li>
+            <li>Salida UI: DataFrame en Streamlit + export <code>resultados.csv</code>.</li>
+          </ul>
+          <p><span class="tag t-inf">Inferencia</span> No existe esquema formal (pydantic/dataclass) ni validación estricta de contratos de entrada.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="ejecucion" class="card">
+      <h2>8) Ejecución y despliegue</h2>
+      <h3>Ejecución local (aparente)</h3>
+      <pre>pip install -r requirements.txt
+python main.py             # pipeline batch y generación de artefactos
+streamlit run app.py       # app de scoring</pre>
+      <h3>Testing</h3>
+      <p>No hay carpeta <code>tests/</code> ni suite automatizada en el repositorio.</p>
+      <h3>Despliegue</h3>
+      <ul>
+        <li>Indicadores de despliegue Streamlit/Hugging Face en <code>README.md</code> frontmatter (<code>sdk: streamlit</code>, <code>app_file: app.py</code>).</li>
+        <li>No hay Dockerfile, compose, Terraform, K8s ni workflows CI/CD versionados dentro de este repo.</li>
+      </ul>
+      <h3>Variables de entorno críticas</h3>
+      <ul>
+        <li><code>SECRET_FOLDER_ID</code>, <code>SECRET_CREDS_FILE</code>, <code>SPREADSHEET_ID_POSTPROCESS</code></li>
+        <li><code>SPACY_ES_MODEL</code>, <code>SPACY_EN_MODEL</code></li>
+      </ul>
+    </section>
+
+    <section id="deps" class="card">
+      <h2>9) Dependencias importantes y uso</h2>
+      <ul>
+        <li><code>streamlit</code>: interfaz de evaluación interactiva y batch.</li>
+        <li><code>pandas</code>/<code>numpy</code>: transformación tabular y cálculo de métricas.</li>
+        <li><code>scikit-learn</code>: RandomForestClassifier/Regressor + métricas + split.</li>
+        <li><code>spacy</code>, <code>nltk</code>, <code>langdetect</code>, <code>langid</code>: NLP, idioma, stopwords.</li>
+        <li><code>InsideForest</code>: interpretación de regiones/clusters de modelos.</li>
+        <li><code>gspread</code> + Google APIs: integración con Drive/Sheets.</li>
+        <li><code>joblib</code>: serialización de modelos.</li>
+      </ul>
+    </section>
+
+    <section id="caso" class="card">
+      <h2>10) Caso práctico narrado (extremo a extremo)</h2>
+      <p>Escenario: equipo de growth quiere elegir 20 títulos ganadores para un canal mixto Shorts/Videos.</p>
+      <ol class="numlist">
+        <li>Se ejecuta <code>main.py</code> con acceso a carpeta de Sheets de scraping histórico.</li>
+        <li>El pipeline deduplica, separa Shorts/Videos y calcula <code>avg_daily_views/likes/comments</code>.</li>
+        <li>Se detecta idioma por título+descripción y se generan señales de texto.</li>
+        <li>Se entrenan modelos por idioma/tipo y se calculan clusters interpretables de títulos buenos/malos.</li>
+        <li>Se publican resultados en Sheets de postproceso para analistas y se guardan modelos + feature maps.</li>
+        <li>En <code>app.py</code>, el equipo sube un TXT con 200 propuestas de título; la app puntúa con 4 modelos.</li>
+        <li>Se ordena por <code>Score Total</code>, se descargan los top-N y se usan para calendarizar publicaciones.</li>
+      </ol>
+    </section>
+
+    <section id="riesgos" class="card">
+      <h2>11) Riesgos y puntos ciegos</h2>
+      <div class="grid g2">
+        <div class="callout">
+          <h3>Riesgos confirmados</h3>
+          <ul>
+            <li>Acoplamiento fuerte a Google Sheets y formato de columnas sin validación de esquema.</li>
+            <li>Descargas NLTK en runtime (<code>nltk.download</code>) pueden fallar en entornos cerrados.</li>
+            <li>Carga de modelos spaCy dentro de funciones de entrenamiento puede penalizar rendimiento.</li>
+            <li>Posible bug funcional: en bloque SHORTS se calcula <code>top_5_s/bottom_5_s</code> usando <code>df_S_df_</code> (VIDEOS), no <code>df_S_df_SHORTS</code>.</li>
+            <li>En <code>main.py</code>, creación de carpeta usa condición <code>if not os.path.exists("models"):</code> antes de <code>os.makedirs("otros_objetos")</code>, lo que sugiere chequeo incorrecto para ese directorio.</li>
+          </ul>
+        </div>
+        <div class="callout" style="border-left-color:#ffcc66;background:#33270f;">
+          <h3>Inferencias (no 100% verificables)</h3>
+          <ul>
+            <li>El pipeline estaría pensado para ejecución periódica externa (scheduler/CI fuera del repo).</li>
+            <li>El dataset de origen probablemente viene de scraping previo de canales YouTube y se vuelca en Sheets intermedios.</li>
+            <li>La app parece orientada a usuarios no técnicos de contenido/growth, no a consumo API.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="evidencia" class="card">
+      <h2>12) Evidencia técnica y top 10 archivos</h2>
+      <h3>Rutas y elementos concretos citados</h3>
+      <ul class="small">
+        <li><code>main.py</code>: función <code>main()</code>, lectura env vars, deduplicación, split shorts/videos, uploads Sheets, guardado joblib/json.</li>
+        <li><code>app.py</code>: <code>load_models()</code>, <code>eval_frase()</code>, tabs de UI, uploader CSV/TXT y descarga CSV.</li>
+        <li><code>utils/google_utils.py</code>: <code>get_sheets_data_from_folder()</code>, <code>upload_dataframe_to_google_sheet()</code>.</li>
+        <li><code>utils/text_processing.py</code>: <code>detect_language()</code>, <code>calculate_avg_daily_metrics()</code>, <code>get_top_bottom_videos()</code>.</li>
+        <li><code>utils/model_utils.py</code>: <code>get_best_words()</code>, TF-IDF + RandomForestRegressor.</li>
+        <li><code>utils/interpret_clusters.py</code>: <code>get_model_interpret()</code>, <code>generate_features_extended()</code>, <code>train_model_lg()</code>.</li>
+        <li><code>requirements.txt</code>: stack técnico principal.</li>
+        <li><code>README.md</code>: metadatos de despliegue Streamlit.</li>
+      </ul>
+
+      <h3>Top 10 archivos para entender el repo rápido</h3>
+      <ol>
+        <li><code>main.py</code></li>
+        <li><code>app.py</code></li>
+        <li><code>utils/interpret_clusters.py</code></li>
+        <li><code>utils/model_utils.py</code></li>
+        <li><code>utils/text_processing.py</code></li>
+        <li><code>utils/google_utils.py</code></li>
+        <li><code>requirements.txt</code></li>
+        <li><code>README.md</code></li>
+        <li><code>otros_objetos/feature_columns.json</code></li>
+        <li><code>models/model_videos_es.joblib</code> (representante de artefactos)</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="container small">
+    Documento HTML autocontenido para GitHub Pages. Modo oscuro por defecto, sin frameworks ni build.
+  </footer>
+
+  <script>
+    // JS inline mínimo para mejorar UX sin dependencias
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const id = a.getAttribute('href').slice(1);
+        const el = document.getElementById(id);
+        if (el) {
+          e.preventDefault();
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
